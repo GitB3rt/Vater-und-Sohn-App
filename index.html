@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Vater und Sohn</title>
-  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="manifest" href="manifest.webmanifest">
   <meta name="theme-color" content="#111111">
   <link rel="icon" href="/assets/icon-192.png">
   <style>
@@ -70,7 +70,7 @@
     // Fallback: spätestens nach 6 Sekunden weiter (falls ended nicht feuert)
     setTimeout(goNext, 6000);
     if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("/sw.js").catch(console.error);
+    navigator.serviceWorker.register("sw.js").catch(console.error);
     }
   </script>
 </body>
