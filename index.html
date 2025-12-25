@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Vater und Sohn</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#111111">
+  <link rel="icon" href="/assets/icon-192.png">
+  <style>
+    body {
+      margin: 0;
+      background: #000;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain; /* wenn du fullscreen "croppen" willst: cover */
+      background: #000;
+    }
+    /* Optional: Skip-Hinweis */
+    .skip {
+      position: fixed;
+      right: 12px;
+      bottom: 12px;
+      padding: 10px 12px;
+      background: rgba(0,0,0,0.55);
+      color: white;
+      border-radius: 10px;
+      font-family: sans-serif;
+      font-size: 14px;
+      cursor: pointer;
+      user-select: none;
+    }
+  </style>
+</head>
+<body>
+  <video id="intro" autoplay muted playsinline>
+    <source src="assets/intro.mp4" type="video/mp4" />
+    Dein Browser kann das Video nicht abspielen.
+  </video>
+
+  <div class="skip" id="skip">Überspringen ▶</div>
+
+  <script>
+    const video = document.getElementById("intro");
+    const skip = document.getElementById("skip");
+
+    function goNext() {
+      window.location.href = "library.html";
+    }
+
+    // Wenn Video zu Ende ist -> weiter
+    video.addEventListener("ended", goNext);
+
+    // Wenn Video nicht lädt oder blockiert -> nach 2 Sekunden weiter
+    video.addEventListener("error", () => setTimeout(goNext, 2000));
+
+    // Klick auf Skip oder irgendwo -> weiter
+    skip.addEventListener("click", goNext);
+    document.body.addEventListener("click", (e) => {
+      // Klick auf Skip ist schon abgedeckt; ansonsten: tippen = skip
+      if (e.target !== skip) goNext();
+    });
+
+    // Fallback: spätestens nach 6 Sekunden weiter (falls ended nicht feuert)
+    setTimeout(goNext, 6000);
+    if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("/sw.js").catch(console.error);
+    }
+  </script>
+</body>
+</html>

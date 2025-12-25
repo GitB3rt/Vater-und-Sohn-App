@@ -1,0 +1,32 @@
+[
+  {
+    "id": "vus_001",
+    "title": "Die vergessenen Rosinen",
+    "cover": "comics/vus_001/cover.webp",
+    "tags": ["alltag"]
+  },
+  {
+    "id": "vus_002",
+    "title": "Ende gut, alles gut",
+    "cover": "comics/vus_002/cover.webp",
+    "tags": ["weihnachten", "fsk12"]
+  },
+  {
+    "id": "vus_003",
+    "title": "TESTDer letzte Keks",
+    "cover": "comics/vus_003/cover.webp",
+    "tags": ["alltag", "fsk0"]
+  },
+  {
+    "id": "vus_004",
+    "title": "TESTDas große Missverständnis",
+    "cover": "comics/vus_004/cover.webp",
+    "tags": ["humor", "fsk0"]
+  },
+  {
+    "id": "vus_005",
+    "title": "TESTDie magische Brille",
+    "cover": "comics/vus_005/cover.webp",
+    "tags": ["fantasy", "fsk0"]
+  }
+]

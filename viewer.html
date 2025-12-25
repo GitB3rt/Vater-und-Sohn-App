@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Comic Viewer</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#111111">
+  <link rel="icon" href="/assets/icon-192.png">
+  <style>
+    body {
+      margin: 0;
+      background: #111;
+      color: white;
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      background: #1b1b1b;
+      font-size: 14px;
+    }
+    #topbar .center {
+      flex: 1;
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      opacity: 0.95;
+    }
+    #topbar a {
+      color: white;
+      text-decoration: none;
+      opacity: 0.85;
+    }
+
+    #viewer {
+      position: relative;
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+      touch-action: pan-y;
+    }
+
+    img {
+      max-width: 100%;
+      max-height: 100%;
+      display: block;
+    }
+
+    .tap-zone {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 50%;
+      z-index: 2;
+    }
+    #tapLeft { left: 0; }
+    #tapRight { right: 0; }
+
+    #controls {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px;
+      background: #222;
+      gap: 10px;
+    }
+
+    button {
+      flex: 1;
+      font-size: 18px;
+      padding: 10px 20px;
+    }
+
+    button:disabled { opacity: 0.4; }
+  </style>
+</head>
+<body>
+
+  <div id="topbar">
+    <a href="library.html">← Auswahl</a>
+    <div class="center" id="title">Comic</div>
+    <div id="progress">1 / 1</div>
+  </div>
+
+  <div id="viewer">
+    <img id="panel" src="" alt="Comic Panel">
+    <div id="tapLeft" class="tap-zone" title="Zurück"></div>
+    <div id="tapRight" class="tap-zone" title="Weiter"></div>
+  </div>
+
+  <div id="controls">
+  <button id="prev">◀ Zurück</button>
+
+  <button id="next">Weiter ▶</button>
+
+  <!-- Diese beiden erscheinen nur beim letzten Bild -->
+  <button id="backToList" style="display:none;">↩ Zurück zur Auswahl</button>
+  <button id="nextStory" style="display:none;">Zur nächsten Geschichte ▶</button>
+</div>
+
+  <script>
+  // ---------- Hilfsfunktionen ----------
+  function getComicIdFromUrl() {
+    const params = new URLSearchParams(location.search);
+    const hashId = location.hash ? decodeURIComponent(location.hash.slice(1)) : "";
+    return params.get("id") || hashId || "vus_001";
+  }
+
+  async function fetchJson(url) {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
+    return await res.json();
+  }
+
+  // ---------- DOM ----------
+  const img = document.getElementById("panel");
+  const prevBtn = document.getElementById("prev");
+  const nextBtn = document.getElementById("next");
+  const backToListBtn = document.getElementById("backToList");
+  const nextStoryBtn = document.getElementById("nextStory");
+  const progressEl = document.getElementById("progress");
+  const viewer = document.getElementById("viewer");
+  const tapLeft = document.getElementById("tapLeft");
+  const tapRight = document.getElementById("tapRight");
+  const titleEl = document.getElementById("title");
+
+  // ---------- State ----------
+  let comicsIndex = [];     // aus comics/index.json
+  let currentComicId = "";
+  let currentComicPath = "";
+  let panels = [];
+  let totalPanels = 1;
+  let currentIndex = 0;
+
+  // ---------- UI ----------
+  function showEndButtons(show, hasNextStory) {
+    if (show) {
+      nextBtn.style.display = "none";
+      backToListBtn.style.display = "";
+      nextStoryBtn.style.display = hasNextStory ? "" : "none";
+    } else {
+      nextBtn.style.display = "";
+      backToListBtn.style.display = "none";
+      nextStoryBtn.style.display = "none";
+    }
+  }
+
+  function updateImage() {
+    const file = panels[currentIndex] || "000.webp";
+    img.src = currentComicPath + file;
+
+    progressEl.textContent = `${currentIndex + 1} / ${totalPanels}`;
+    prevBtn.disabled = currentIndex === 0;
+
+    const atEnd = currentIndex === totalPanels - 1;
+    const nextId = getNextComicId();
+    showEndButtons(atEnd, Boolean(nextId));
+
+    // Preload nächstes Panel
+    const nextIndex = currentIndex + 1;
+    if (nextIndex < totalPanels) {
+      const preload = new Image();
+      preload.src = currentComicPath + panels[nextIndex];
+    }
+  }
+
+  function prev() {
+    if (currentIndex > 0) {
+      currentIndex--;
+      updateImage();
+    }
+  }
+
+  function next() {
+    if (currentIndex < totalPanels - 1) {
+      currentIndex++;
+      updateImage();
+    }
+    // Wenn am Ende: Buttons erscheinen automatisch, kein Auto-Jump
+  }
+
+  function goToList() {
+    window.location.href = "library.html";
+  }
+
+  function getNextComicId() {
+    const i = comicsIndex.findIndex(c => c.id === currentComicId);
+    if (i < 0) return null;
+    const next = comicsIndex[i + 1];
+    return next ? next.id : null;
+  }
+
+  function goToNextStory() {
+    const nextId = getNextComicId();
+    if (!nextId) return;
+    // Hash wechseln -> wir reloaden den Comic
+    location.hash = encodeURIComponent(nextId);
+  }
+
+  // ---------- Touch Swipe ----------
+  let touchStartX = null, touchStartY = null;
+
+  viewer.addEventListener("touchstart", (e) => {
+    const t = e.touches[0];
+    touchStartX = t.clientX;
+    touchStartY = t.clientY;
+  }, { passive: true });
+
+  viewer.addEventListener("touchend", (e) => {
+    if (touchStartX === null || touchStartY === null) return;
+
+    const t = e.changedTouches[0];
+    const dx = t.clientX - touchStartX;
+    const dy = t.clientY - touchStartY;
+
+    const absX = Math.abs(dx);
+    const absY = Math.abs(dy);
+
+    const minSwipe = 40;
+    if (absX > absY && absX > minSwipe) {
+      if (dx < 0) next();
+      else prev();
+    }
+
+    touchStartX = null;
+    touchStartY = null;
+  }, { passive: true });
+
+  // ---------- Events ----------
+  prevBtn.addEventListener("click", prev);
+  nextBtn.addEventListener("click", next);
+
+  backToListBtn.addEventListener("click", goToList);
+  nextStoryBtn.addEventListener("click", goToNextStory);
+
+  tapLeft.addEventListener("click", prev);
+  tapRight.addEventListener("click", next);
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowLeft") prev();
+    if (e.key === "ArrowRight") next();
+  });
+
+  window.addEventListener("hashchange", () => {
+    const newId = getComicIdFromUrl();
+    loadComic(newId).catch(err => {
+      console.error(err);
+      titleEl.textContent = "Fehler";
+      progressEl.textContent = "—";
+    });
+  });
+
+  // ---------- Loading ----------
+  async function loadComic(comicId) {
+    currentComicId = comicId;
+    currentComicPath = `comics/${currentComicId}/`;
+
+    // comic.json laden
+    const data = await fetchJson(currentComicPath + "comic.json");
+
+    titleEl.textContent = data.title || currentComicId;
+    panels = Array.isArray(data.panels) ? data.panels : [];
+    totalPanels = panels.length || 1;
+
+    // immer am Anfang starten
+    currentIndex = 0;
+
+    // End-Buttons initial verstecken
+    showEndButtons(false, false);
+
+    updateImage();
+  }
+
+  async function init() {
+    // Reihenfolge der Stories laden (für "Zur nächsten Geschichte")
+    comicsIndex = await fetchJson("comics/index.json");
+
+    const comicId = getComicIdFromUrl();
+    await loadComic(comicId);
+  }
+
+  init().catch(err => {
+    console.error(err);
+    titleEl.textContent = "Fehler";
+    progressEl.textContent = "—";
+  });
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("/sw.js").catch(console.error);
+    }
+</script>
+
+</body>
+</html>

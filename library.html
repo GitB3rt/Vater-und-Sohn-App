@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Geschichten</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#111111">
+
+  <style>
+    body {
+      margin: 0;
+      background: #111;
+      color: white;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    header {
+      padding: 16px;
+      font-size: 22px;
+      background: #1b1b1b;
+    }
+
+    /* ===== FILTER BAR ===== */
+    .filters {
+      display: flex;
+      gap: 10px;
+      padding: 12px 16px;
+      overflow-x: auto;
+      background: #111;
+    }
+
+    .filters button {
+      background: #222;
+      color: white;
+      border: none;
+      border-radius: 999px;
+      padding: 8px 14px;
+      font-size: 14px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .filters button.active {
+      background: #fff;
+      color: #111;
+    }
+
+    main {
+      padding: 16px;
+    }
+
+    /* ===== GRID ===== */
+    .grid {
+      display: grid;
+      gap: 16px;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    }
+
+    /* ===== TILE ===== */
+    .tile {
+      cursor: pointer;
+      text-align: center;
+    }
+
+    .cover {
+      aspect-ratio: 1 / 1;
+      border-radius: 14px;
+      overflow: hidden;
+      background: #222;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+    }
+
+    .cover img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .title {
+      margin-top: 8px;
+      font-size: 15px;
+      line-height: 1.3;
+    }
+
+    .tile:active {
+      transform: scale(0.97);
+    }
+  </style>
+</head>
+<body>
+
+  <header>Geschichten</header>
+
+  <!-- FILTER -->
+  <div class="filters">
+    <button data-filter="all" class="active">Alle</button>
+    <button data-filter="weihnachten">Weihnachten</button>
+    <button data-filter="ostern">Ostern</button>
+    <button data-filter="fsk12">FSK 12</button>
+  </div>
+
+  <!-- GRID -->
+  <main>
+    <div id="grid" class="grid">Lädt…</div>
+  </main>
+
+  <script>
+    let allComics = [];
+    let activeFilter = "all";
+
+    const grid = document.getElementById("grid");
+    const filterButtons = document.querySelectorAll(".filters button");
+
+    async function loadComics() {
+      try {
+        const res = await fetch("comics/index.json");
+        allComics = await res.json();
+        render();
+      } catch (e) {
+        console.error(e);
+        grid.innerText = "Fehler beim Laden der Geschichten.";
+      }
+    }
+
+    function render() {
+      grid.innerHTML = "";
+
+      const filtered =
+        activeFilter === "all"
+          ? allComics
+          : allComics.filter(c => (c.tags || []).includes(activeFilter));
+
+      if (filtered.length === 0) {
+        grid.innerHTML = "<div>Keine Geschichten gefunden.</div>";
+        return;
+      }
+
+      for (const c of filtered) {
+        const tile = document.createElement("div");
+        tile.className = "tile";
+
+        tile.innerHTML = `
+          <div class="cover">
+            <img src="${c.cover}" alt="">
+          </div>
+          <div class="title">${c.title}</div>
+        `;
+
+        tile.addEventListener("click", () => {
+          window.location.href = `viewer.html#${encodeURIComponent(c.id)}`;
+        });
+
+        grid.appendChild(tile);
+      }
+    }
+
+    // Filter-Handling
+    filterButtons.forEach(btn => {
+      btn.addEventListener("click", () => {
+        filterButtons.forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        activeFilter = btn.dataset.filter;
+        render();
+      });
+    });
+
+    loadComics();
+  </script>
+
+</body>
+</html>
