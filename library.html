@@ -90,13 +90,88 @@
     .tile:active {
       transform: scale(0.97);
     }
+
+    /* ===== Topbar ===== */
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px;
+      font-size: 22px;
+      background: #1b1b1b;
+    }
+
+    /* Info-Button */
+    .info-btn {
+      font-size: 18px;
+      background: none;
+      border: none;
+      color: white;
+      cursor: pointer;
+      opacity: 0.85;
+    }
+    .info-btn:hover {
+      opacity: 1;
+    }
+
+    /* ===== Info Overlay ===== */
+    .info-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.65);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .info-overlay.active {
+      display: flex;
+    }
+
+    .info-card {
+      background: #1e1e1e;
+      color: white;
+      max-width: 420px;
+      width: calc(100% - 32px);
+      padding: 20px;
+      border-radius: 14px;
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    .info-card h2 {
+      margin-top: 0;
+      font-size: 18px;
+    }
+
+    .info-card a {
+      color: #9ad;
+      text-decoration: none;
+    }
+
+    .info-card a:hover {
+      text-decoration: underline;
+    }
+
+    .info-close {
+      margin-top: 16px;
+      display: block;
+      text-align: right;
+      cursor: pointer;
+      opacity: 0.8;
+    }
+
   </style>
 </head>
 <body>
 
-  <header>Geschichten</header>
+  <header class="topbar">
+    <div>Vater und Sohn Bildergeschichten</div>
+    <button id="infoBtn" class="info-btn" aria-label="Info">ⓘ</button>
+  </header>
 
-  <!-- FILTER -->
+    <!-- FILTER -->
   <div class="filters">
     <button data-filter="all" class="active">Alle</button>
     <button data-filter="weihnachten">Filter1</button>
@@ -109,6 +184,33 @@
     <div id="grid" class="grid">Lädt…</div>
   </main>
 
+  <!-- Info Overlay -->
+  <div id="infoOverlay" class="info-overlay">
+    <div class="info-card">
+      <h2>Vater und Sohn</h2>
+
+      <p>
+        Diese Seite sammelt die berühmten Bildergeschichten
+        <strong>„Vater und Sohn“</strong> von <strong>e. o. plauen</strong>.
+      </p>
+
+      <p>
+        Die Seite ist gedacht für Groß und Klein, um die Geschichten unterwegs dabeizuhaben und Freude an den Geschichten zu wecken.
+      </p>
+
+      <p>
+        Mehr Infos zu e.o. plauen auf der <a href="https://de.wikipedia.org/wiki/E._O._Plauen"
+          target="_blank" rel="noopener">
+          Wikipedia. </a>
+      </p>
+
+          Feedback, Kritik, Anregungen zur Seite? <a href="mailto: robert.wenzl@posteo.de">Hier Kontakt aufnehmen.
+        </a>
+      </p>
+
+      <span class="info-close">✕ Schließen</span>
+    </div>
+  </div>
   <script>
     let allComics = [];
     let activeFilter = "all";
@@ -193,6 +295,25 @@
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("sw.js").catch(console.error);
     }
+
+    const infoBtn = document.getElementById("infoBtn");
+    const infoOverlay = document.getElementById("infoOverlay");
+    const infoClose = infoOverlay.querySelector(".info-close");
+
+    infoBtn.addEventListener("click", () => {
+      infoOverlay.classList.add("active");
+    });
+
+    infoClose.addEventListener("click", () => {
+      infoOverlay.classList.remove("active");
+    });
+
+    infoOverlay.addEventListener("click", (e) => {
+      if (e.target === infoOverlay) {
+        infoOverlay.classList.remove("active");
+      }
+    });
+
   </script>
 
 </body>
