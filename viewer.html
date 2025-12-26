@@ -4,9 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Comic Viewer</title>
+
+  <!-- PWA -->
   <link rel="manifest" href="manifest.webmanifest">
   <meta name="theme-color" content="#111111">
   <link rel="icon" href="assets/icon-192.png">
+
   <style>
     body {
       margin: 0;
@@ -44,27 +47,75 @@
       opacity: 0.85;
     }
 
+    /* ===== Viewer ===== */
     #viewer {
       position: relative;
       flex: 1;
-      display: flex;
-      justify-content: center;
-      align-items: center;
       overflow: hidden;
       touch-action: pan-y pinch-zoom;
+      background: #111;
     }
 
-    img {
-      max-width: 100%;
-      max-height: 100%;
+    /* ===== Carousel / Slide + Peek ===== */
+    .carousel {
+      height: 100%;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      will-change: transform;
+      transform: translateX(0px);
+      transition: transform 180ms ease;
+    }
+
+    .carousel.dragging {
+      transition: none;
+    }
+
+    .panel {
+      height: 100%;
+      object-fit: contain;
+      flex: 0 0 auto;
+      user-select: none;
+      -webkit-user-drag: none;
       display: block;
-      opacity: 0;
-      transition: opacity 260ms ease;
-    }
-    img.loaded {
-      opacity: 1;
     }
 
+    /* Peek-Layout: Mitte groß, Seiten schmal */
+    .panel.current {
+      width: 86vw;
+      max-width: 980px;
+      margin: 0 1.5vw;
+    }
+
+    .panel.side {
+      width: 10vw;
+      opacity: 0.55;
+      filter: saturate(0.9);
+    }
+
+    /* Wenn es kein prev/next gibt, „schieben“ wir den Peek-Bereich weg
+       -> kein schwarzer Balken links/rechts */
+    #viewer.no-prev .panel.prev {
+      width: 0 !important;
+      opacity: 0 !important;
+      margin: 0 !important;
+      pointer-events: none;
+    }
+
+    #viewer.no-next .panel.next {
+      width: 0 !important;
+      opacity: 0 !important;
+      margin: 0 !important;
+      pointer-events: none;
+    }
+
+    @media (max-width: 420px) {
+      .panel.current { width: 84vw; margin: 0 2vw; }
+      .panel.side { width: 12vw; }
+    }
+
+    /* Tap-Zonen (Desktop hilfreich, Mobile stören beim Zoom) */
     .tap-zone {
       position: absolute;
       top: 0;
@@ -75,6 +126,11 @@
     #tapLeft { left: 0; }
     #tapRight { right: 0; }
 
+    @media (pointer: coarse) {
+      .tap-zone { display: none; }
+    }
+
+    /* ===== Controls ===== */
     #controls {
       display: flex;
       justify-content: space-between;
@@ -90,13 +146,6 @@
     }
 
     button:disabled { opacity: 0.4; }
-
-    @media (pointer: coarse) {
-      .tap-zone {
-        display: none;
-      }
-    }
-
   </style>
 </head>
 <body>
@@ -108,217 +157,292 @@
   </div>
 
   <div id="viewer">
-    <img id="panel" src="" alt="Comic Panel">
+    <div id="carousel" class="carousel">
+      <img id="panelPrev" class="panel side prev" src="" alt="">
+      <img id="panelCurrent" class="panel current" src="" alt="Comic Panel">
+      <img id="panelNext" class="panel side next" src="" alt="">
+    </div>
+
     <div id="tapLeft" class="tap-zone" title="Zurück"></div>
     <div id="tapRight" class="tap-zone" title="Weiter"></div>
   </div>
 
   <div id="controls">
-  <button id="prev">◀ Zurück</button>
+    <button id="prev">◀ Zurück</button>
+    <button id="next">Weiter ▶</button>
 
-  <button id="next">Weiter ▶</button>
-
-  <!-- Diese beiden erscheinen nur beim letzten Bild -->
-  <button id="backToList" style="display:none;">Zurück zur Auswahl</button>
-  <button id="nextStory" style="display:none;">Nächste Geschichte ▶</button>
-</div>
+    <!-- Diese beiden erscheinen nur beim letzten Bild -->
+    <button id="backToList" style="display:none;">Zurück zur Auswahl</button>
+    <button id="nextStory" style="display:none;">Zur nächsten Geschichte ▶</button>
+  </div>
 
   <script>
-  function getComicIdFromUrl() {
-    const params = new URLSearchParams(location.search);
-    const hashId = location.hash ? decodeURIComponent(location.hash.slice(1)) : "";
-    return params.get("id") || hashId || "vus_001";
-  }
-
-  async function fetchJson(url) {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
-    return await res.json();
-  }
-
-  const img = document.getElementById("panel");
-  const prevBtn = document.getElementById("prev");
-  const nextBtn = document.getElementById("next");
-  const backToListBtn = document.getElementById("backToList");
-  const nextStoryBtn = document.getElementById("nextStory");
-  const progressEl = document.getElementById("progress");
-  const viewer = document.getElementById("viewer");
-  const tapLeft = document.getElementById("tapLeft");
-  const tapRight = document.getElementById("tapRight");
-  const titleEl = document.getElementById("title");
-
-  let comicsIndex = [];
-  let currentComicId = "";
-  let currentComicPath = "";
-  let panels = [];
-  let totalPanels = 1;
-  let currentIndex = 0;
-
-  // Zoom-Status: Swipe nur wenn nicht gezoomt
-  function isZoomed() {
-    return !!window.visualViewport && window.visualViewport.scale > 1.01;
-  }
-
-  function showEndButtons(show, hasNextStory) {
-    if (show) {
-      nextBtn.style.display = "none";
-      backToListBtn.style.display = "";
-      nextStoryBtn.style.display = hasNextStory ? "" : "none";
-    } else {
-      nextBtn.style.display = "";
-      backToListBtn.style.display = "none";
-      nextStoryBtn.style.display = "none";
-    }
-  }
-
-  function getNextComicId() {
-    const i = comicsIndex.findIndex(c => c.id === currentComicId);
-    if (i < 0) return null;
-    const next = comicsIndex[i + 1];
-    return next ? next.id : null;
-  }
-
-  function goToList() {
-    window.location.href = "library.html";
-  }
-
-  function goToNextStory() {
-    const nextId = getNextComicId();
-    if (!nextId) return;
-    location.hash = encodeURIComponent(nextId);
-  }
-
-  function setImageWithFade(src) {
-    img.classList.remove("loaded");
-    img.onload = () => {
-      img.classList.add("loaded");
-      img.onload = null; // verhindert Mehrfach-Auslösen
-    };
-    img.src = src;
-  }
-
-  function updateImage() {
-    const file = panels[currentIndex] || "000.webp";
-    setImageWithFade(currentComicPath + file);
-
-    progressEl.textContent = `${currentIndex + 1} / ${totalPanels}`;
-    prevBtn.disabled = currentIndex === 0;
-
-    const atEnd = currentIndex === totalPanels - 1;
-    const nextId = getNextComicId();
-    showEndButtons(atEnd, Boolean(nextId));
-
-    // Preload nächstes Panel
-    const nextIndex = currentIndex + 1;
-    if (nextIndex < totalPanels) {
-      const preload = new Image();
-      preload.src = currentComicPath + panels[nextIndex];
-    }
-  }
-
-  function prev() {
-    if (currentIndex > 0) {
-      currentIndex--;
-      updateImage();
-    }
-  }
-
-  function next() {
-    if (currentIndex < totalPanels - 1) {
-      currentIndex++;
-      updateImage();
-    }
-  }
-
-  // Buttons / Tap-Zonen
-  prevBtn.addEventListener("click", prev);
-  nextBtn.addEventListener("click", next);
-  backToListBtn.addEventListener("click", goToList);
-  nextStoryBtn.addEventListener("click", goToNextStory);
-  tapLeft.addEventListener("click", prev);
-  tapRight.addEventListener("click", next);
-
-  // Tastatur
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "ArrowLeft") prev();
-    if (e.key === "ArrowRight") next();
-  });
-
-  // Swipe (nur wenn NICHT gezoomt und nur 1 Finger)
-  let touchStartX = null, touchStartY = null;
-
-  viewer.addEventListener("touchstart", (e) => {
-    if (e.touches.length !== 1) { // Pinch o.ä.
-      touchStartX = null;
-      touchStartY = null;
-      return;
-    }
-    const t = e.touches[0];
-    touchStartX = t.clientX;
-    touchStartY = t.clientY;
-  }, { passive: true });
-
-  viewer.addEventListener("touchend", (e) => {
-    if (touchStartX === null || touchStartY === null) return;
-    if (isZoomed()) return; // im Zoom nie navigieren
-
-    const t = e.changedTouches[0];
-    const dx = t.clientX - touchStartX;
-    const dy = t.clientY - touchStartY;
-
-    const absX = Math.abs(dx);
-    const absY = Math.abs(dy);
-
-    const minSwipe = 40;
-    if (absX > absY && absX > minSwipe) {
-      if (dx < 0) next();
-      else prev();
+    function getComicIdFromUrl() {
+      const params = new URLSearchParams(location.search);
+      const hashId = location.hash ? decodeURIComponent(location.hash.slice(1)) : "";
+      return params.get("id") || hashId || "vus_001";
     }
 
-    touchStartX = null;
-    touchStartY = null;
-  }, { passive: true });
+    async function fetchJson(url) {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
+      return await res.json();
+    }
 
-  window.addEventListener("hashchange", () => {
-    const newId = getComicIdFromUrl();
-    loadComic(newId).catch(err => {
+    // DOM
+    const prevBtn = document.getElementById("prev");
+    const nextBtn = document.getElementById("next");
+    const backToListBtn = document.getElementById("backToList");
+    const nextStoryBtn = document.getElementById("nextStory");
+    const progressEl = document.getElementById("progress");
+    const viewer = document.getElementById("viewer");
+    const tapLeft = document.getElementById("tapLeft");
+    const tapRight = document.getElementById("tapRight");
+    const titleEl = document.getElementById("title");
+
+    const carousel = document.getElementById("carousel");
+    const imgPrev = document.getElementById("panelPrev");
+    const imgCur  = document.getElementById("panelCurrent");
+    const imgNext = document.getElementById("panelNext");
+
+    // State
+    let comicsIndex = [];
+    let currentComicId = "";
+    let currentComicPath = "";
+    let panels = [];
+    let totalPanels = 1;
+    let currentIndex = 0;
+
+    // FIX (2): Sperre während Slide-Animation (verhindert Bild 7/6)
+    let isAnimating = false;
+
+    function isZoomed() {
+      return !!window.visualViewport && window.visualViewport.scale > 1.01;
+    }
+
+    function showEndButtons(show, hasNextStory) {
+      if (show) {
+        nextBtn.style.display = "none";
+        backToListBtn.style.display = "";
+        nextStoryBtn.style.display = hasNextStory ? "" : "none";
+      } else {
+        nextBtn.style.display = "";
+        backToListBtn.style.display = "none";
+        nextStoryBtn.style.display = "none";
+      }
+    }
+
+    function getNextComicId() {
+      const i = comicsIndex.findIndex(c => c.id === currentComicId);
+      if (i < 0) return null;
+      const next = comicsIndex[i + 1];
+      return next ? next.id : null;
+    }
+
+    function goToList() {
+      window.location.href = "library.html";
+    }
+
+    function goToNextStory() {
+      const nextId = getNextComicId();
+      if (!nextId) return;
+      location.hash = encodeURIComponent(nextId);
+    }
+
+    function fileAt(i) {
+      return panels[i] || "000.webp";
+    }
+
+    // FIX (1): Peek nur zeigen, wenn prev/next existiert -> kein schwarzer Balken
+    function updatePeekClasses() {
+      viewer.classList.toggle("no-prev", currentIndex === 0);
+      viewer.classList.toggle("no-next", currentIndex >= totalPanels - 1);
+    }
+
+    function setImages() {
+      imgCur.src = currentComicPath + fileAt(currentIndex);
+
+      if (currentIndex > 0) {
+        imgPrev.src = currentComicPath + fileAt(currentIndex - 1);
+      } else {
+        imgPrev.src = "";
+      }
+
+      if (currentIndex < totalPanels - 1) {
+        imgNext.src = currentComicPath + fileAt(currentIndex + 1);
+      } else {
+        imgNext.src = "";
+      }
+
+      updatePeekClasses();
+
+      progressEl.textContent = `${currentIndex + 1} / ${totalPanels}`;
+      prevBtn.disabled = currentIndex === 0;
+
+      const atEnd = currentIndex === totalPanels - 1;
+      showEndButtons(atEnd, Boolean(getNextComicId()));
+    }
+
+    function currentStepWidth() {
+      const rect = imgCur.getBoundingClientRect();
+      const cs = getComputedStyle(imgCur);
+      const ml = parseFloat(cs.marginLeft) || 0;
+      const mr = parseFloat(cs.marginRight) || 0;
+      return rect.width + ml + mr;
+    }
+
+    // Slide animation helper
+    function slideTo(direction) {
+      if (isAnimating) return;
+
+      const targetIndex = currentIndex + direction;
+      if (targetIndex < 0 || targetIndex > totalPanels - 1) return;
+
+      isAnimating = true;
+
+      const width = currentStepWidth();
+      carousel.classList.remove("dragging");
+      carousel.style.transform = `translateX(${direction * -width}px)`;
+
+      const onDone = () => {
+        carousel.removeEventListener("transitionend", onDone);
+
+        currentIndex = targetIndex;
+
+        // reset transform instantly + update images
+        carousel.classList.add("dragging");
+        carousel.style.transform = "translateX(0px)";
+        setImages();
+
+        requestAnimationFrame(() => {
+          carousel.classList.remove("dragging");
+          isAnimating = false;
+        });
+      };
+
+      carousel.addEventListener("transitionend", onDone);
+    }
+
+    function prev() {
+      if (currentIndex === 0) return;
+      slideTo(-1);
+    }
+
+    function next() {
+      if (currentIndex >= totalPanels - 1) return;
+      slideTo(+1);
+    }
+
+    // Buttons / tap zones
+    prevBtn.addEventListener("click", prev);
+    nextBtn.addEventListener("click", next);
+    backToListBtn.addEventListener("click", goToList);
+    nextStoryBtn.addEventListener("click", goToNextStory);
+    tapLeft.addEventListener("click", prev);
+    tapRight.addEventListener("click", next);
+
+    // Keyboard
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowLeft") prev();
+      if (e.key === "ArrowRight") next();
+    });
+
+    // Drag / Swipe (only when not zoomed, and not animating)
+    let dragging = false;
+    let startX = 0;
+    let lastX = 0;
+
+    viewer.addEventListener("touchstart", (e) => {
+      if (e.touches.length !== 1) return;
+      if (isZoomed()) return;
+      if (isAnimating) return;
+
+      dragging = true;
+      startX = e.touches[0].clientX;
+      lastX = startX;
+      carousel.classList.add("dragging");
+    }, { passive: true });
+
+    viewer.addEventListener("touchmove", (e) => {
+      if (!dragging) return;
+      const x = e.touches[0].clientX;
+      lastX = x;
+      const dx = x - startX;
+      carousel.style.transform = `translateX(${dx}px)`;
+    }, { passive: true });
+
+    viewer.addEventListener("touchend", () => {
+      if (!dragging) return;
+      dragging = false;
+
+      const dx = lastX - startX;
+      const threshold = Math.min(120, window.innerWidth * 0.18);
+
+      carousel.classList.remove("dragging");
+
+      if (dx < -threshold) {
+        if (currentIndex < totalPanels - 1) {
+          carousel.style.transform = "translateX(0px)";
+          next();
+          return;
+        }
+      } else if (dx > threshold) {
+        if (currentIndex > 0) {
+          carousel.style.transform = "translateX(0px)";
+          prev();
+          return;
+        }
+      }
+
+      // snap back
+      carousel.style.transform = "translateX(0px)";
+    }, { passive: true });
+
+    // Hash change (next story)
+    window.addEventListener("hashchange", () => {
+      const newId = getComicIdFromUrl();
+      loadComic(newId).catch(err => {
+        console.error(err);
+        titleEl.textContent = "Fehler";
+        progressEl.textContent = "—";
+      });
+    });
+
+    async function loadComic(comicId) {
+      currentComicId = comicId;
+      currentComicPath = `comics/${currentComicId}/`;
+
+      const data = await fetchJson(currentComicPath + "comic.json");
+
+      titleEl.textContent = data.title || currentComicId;
+      panels = Array.isArray(data.panels) ? data.panels : [];
+      totalPanels = panels.length || 1;
+
+      currentIndex = 0; // always start at beginning
+      isAnimating = false;
+
+      carousel.classList.add("dragging");
+      carousel.style.transform = "translateX(0px)";
+      setImages();
+      requestAnimationFrame(() => carousel.classList.remove("dragging"));
+    }
+
+    async function init() {
+      comicsIndex = await fetchJson("comics/index.json");
+      await loadComic(getComicIdFromUrl());
+    }
+
+    init().catch(err => {
       console.error(err);
       titleEl.textContent = "Fehler";
       progressEl.textContent = "—";
     });
-  });
 
-  async function loadComic(comicId) {
-    currentComicId = comicId;
-    currentComicPath = `comics/${currentComicId}/`;
-
-    const data = await fetchJson(currentComicPath + "comic.json");
-
-    titleEl.textContent = data.title || currentComicId;
-    panels = Array.isArray(data.panels) ? data.panels : [];
-    totalPanels = panels.length || 1;
-
-    currentIndex = 0; // immer am Anfang starten
-    showEndButtons(false, false);
-    updateImage();
-  }
-
-  async function init() {
-    comicsIndex = await fetchJson("comics/index.json");
-    const comicId = getComicIdFromUrl();
-    await loadComic(comicId);
-  }
-
-  init().catch(err => {
-    console.error(err);
-    titleEl.textContent = "Fehler";
-    progressEl.textContent = "—";
-  });
-
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("sw.js").catch(console.error);
-  }
-</script>
+    // Service Worker (falls jemand direkt viewer.html öffnet)
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("sw.js").catch(console.error);
+    }
+  </script>
 
 </body>
 </html>
