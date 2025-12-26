@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Geschichten</title>
+  <link rel="icon" href="assets/icon-192.png">
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.webmanifest">
@@ -143,12 +144,32 @@
         const tile = document.createElement("div");
         tile.className = "tile";
 
-        tile.innerHTML = `
-          <div class="cover">
-            <img src="${c.cover}" alt="">
-          </div>
-          <div class="title">${c.title}</div>
-        `;
+        // Cover: bevorzugt c.cover, sonst default cover.webp
+        const preferredCover = c.cover || `comics/${c.id}/cover.webp`;
+        // Fallback: erstes Panel (deine Konvention: 000.webp)
+        const fallbackCover = `comics/${c.id}/000.webp`;
+
+        const coverWrap = document.createElement("div");
+        coverWrap.className = "cover";
+
+        const img = document.createElement("img");
+        img.loading = "lazy";
+        img.alt = "";
+        img.src = preferredCover;
+        img.onerror = () => {
+          // nur einmal fallbacken, sonst Endlosschleife
+          if (img.src.endsWith("000.webp")) return;
+          img.src = fallbackCover;
+        };
+
+        coverWrap.appendChild(img);
+
+        const title = document.createElement("div");
+        title.className = "title";
+        title.textContent = c.title;
+
+        tile.appendChild(coverWrap);
+        tile.appendChild(title);
 
         tile.addEventListener("click", () => {
           window.location.href = `viewer.html#${encodeURIComponent(c.id)}`;
@@ -158,7 +179,6 @@
       }
     }
 
-    // Filter-Handling
     filterButtons.forEach(btn => {
       btn.addEventListener("click", () => {
         filterButtons.forEach(b => b.classList.remove("active"));
@@ -169,6 +189,10 @@
     });
 
     loadComics();
+
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("sw.js").catch(console.error);
+    }
   </script>
 
 </body>

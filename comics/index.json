@@ -1,32 +1,164 @@
 [
   {
     "id": "vus_001",
-    "title": "Die vergessenen Rosinen",
+    "title": "Auch Tadel hat seine Grenze",
     "cover": "comics/vus_001/cover.webp",
-    "tags": ["alltag"]
+    "tags": [
+      "dummy_tag_1",
+      "ostern"
+    ]
   },
   {
     "id": "vus_002",
-    "title": "Ende gut, alles gut",
+    "title": "Das fesselnde Buch",
     "cover": "comics/vus_002/cover.webp",
-    "tags": ["weihnachten", "fsk12"]
+    "tags": [
+      "weihnachten",
+      "dummy_tag_2"
+    ]
   },
   {
     "id": "vus_003",
-    "title": "TESTDer letzte Keks",
+    "title": "Das ist nicht Vater",
     "cover": "comics/vus_003/cover.webp",
-    "tags": ["alltag", "fsk0"]
+    "tags": [
+      "dummy_tag_1",
+      "dummy_tag_2"
+    ]
   },
   {
     "id": "vus_004",
-    "title": "TESTDas große Missverständnis",
+    "title": "Das spannende Buch",
     "cover": "comics/vus_004/cover.webp",
-    "tags": ["humor", "fsk0"]
+    "tags": [
+      "dummy_tag_1",
+      "dummy_tag_2"
+    ]
   },
   {
     "id": "vus_005",
-    "title": "TESTDie magische Brille",
+    "title": "Der Aufschrecker",
     "cover": "comics/vus_005/cover.webp",
-    "tags": ["fantasy", "fsk0"]
+    "tags": [
+      "dummy_tag_1",
+      "dummy_tag_2"
+    ]
+  },
+  {
+    "id": "vus_006",
+    "title": "Der Einbrecher",
+    "cover": "comics/vus_006/cover.webp",
+    "tags": [
+      "dummy_tag_1",
+      "dummy_tag_2"
+    ]
+  },
+  {
+    "id": "vus_007",
+    "title": "Der reiche Onkel",
+    "cover": "comics/vus_007/cover.webp",
+    "tags": [
+      "dummy_tag_1",
+      "dummy_tag_2"
+    ]
+  },
+  {
+    "id": "vus_008",
+    "title": "Die gute Gelegenheit",
+    "cover": "comics/vus_008/cover.webp",
+    "tags": [
+      "dummy_tag_1",
+      "dummy_tag_2"
+    ]
+  },
+  {
+    "id": "vus_009",
+    "title": "Die vergessenen Rosinen",
+    "cover": "comics/vus_009/cover.webp",
+    "tags": [
+      "dummy_tag_1",
+      "dummy_tag_2"
+    ]
+  },
+  {
+    "id": "vus_010",
+    "title": "Die werden's nie kapieren!",
+    "cover": "comics/vus_010/cover.webp",
+    "tags": [
+      "ostern",
+      "dummy_tag_2"
+    ]
+  },
+  {
+    "id": "vus_011",
+    "title": "Ende gut - alles gut",
+    "cover": "comics/vus_011/cover.webp",
+    "tags": [
+      "dummy_tag_1",
+      "dummy_tag_2"
+    ]
+  },
+  {
+    "id": "vus_012",
+    "title": "Erfindung für einen Hund",
+    "cover": "comics/vus_012/cover.webp",
+    "tags": [
+      "dummy_tag_1",
+      "dummy_tag_2"
+    ]
+  },
+  {
+    "id": "vus_013",
+    "title": "Frühsport",
+    "cover": "comics/vus_013/cover.webp",
+    "tags": [
+      "dummy_tag_1",
+      "dummy_tag_2"
+    ]
+  },
+  {
+    "id": "vus_014",
+    "title": "Oh, Goethe",
+    "cover": "comics/vus_014/cover.webp",
+    "tags": [
+      "dummy_tag_1",
+      "dummy_tag_2"
+    ]
+  },
+  {
+    "id": "vus_015",
+    "title": "Schlechte Schularbeiten",
+    "cover": "comics/vus_015/cover.webp",
+    "tags": [
+      "dummy_tag_1",
+      "dummy_tag_2"
+    ]
+  },
+  {
+    "id": "vus_016",
+    "title": "So nicht",
+    "cover": "comics/vus_016/cover.webp",
+    "tags": [
+      "fsk12",
+      "dummy_tag_2"
+    ]
+  },
+  {
+    "id": "vus_017",
+    "title": "Wachstum",
+    "cover": "comics/vus_017/cover.webp",
+    "tags": [
+      "dummy_tag_1",
+      "dummy_tag_2"
+    ]
+  },
+  {
+    "id": "vus_018",
+    "title": "Überraschung am Strand",
+    "cover": "comics/vus_018/cover.webp",
+    "tags": [
+      "dummy_tag_1",
+      "dummy_tag_2"
+    ]
   }
 ]

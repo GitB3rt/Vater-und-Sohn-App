@@ -6,7 +6,7 @@
   <title>Comic Viewer</title>
   <link rel="manifest" href="manifest.webmanifest">
   <meta name="theme-color" content="#111111">
-  <link rel="icon" href="/assets/icon-192.png">
+  <link rel="icon" href="assets/icon-192.png">
   <style>
     body {
       margin: 0;
@@ -51,13 +51,18 @@
       justify-content: center;
       align-items: center;
       overflow: hidden;
-      touch-action: pan-y;
+      touch-action: pan-y pinch-zoom;
     }
 
     img {
       max-width: 100%;
       max-height: 100%;
       display: block;
+      opacity: 0;
+      transition: opacity 160ms ease;
+    }
+    img.loaded {
+      opacity: 1;
     }
 
     .tap-zone {
@@ -85,6 +90,13 @@
     }
 
     button:disabled { opacity: 0.4; }
+
+    @media (pointer: coarse) {
+      .tap-zone {
+        display: none;
+      }
+    }
+
   </style>
 </head>
 <body>
@@ -112,7 +124,6 @@
 </div>
 
   <script>
-  // ---------- Hilfsfunktionen ----------
   function getComicIdFromUrl() {
     const params = new URLSearchParams(location.search);
     const hashId = location.hash ? decodeURIComponent(location.hash.slice(1)) : "";
@@ -125,7 +136,6 @@
     return await res.json();
   }
 
-  // ---------- DOM ----------
   const img = document.getElementById("panel");
   const prevBtn = document.getElementById("prev");
   const nextBtn = document.getElementById("next");
@@ -137,15 +147,18 @@
   const tapRight = document.getElementById("tapRight");
   const titleEl = document.getElementById("title");
 
-  // ---------- State ----------
-  let comicsIndex = [];     // aus comics/index.json
+  let comicsIndex = [];
   let currentComicId = "";
   let currentComicPath = "";
   let panels = [];
   let totalPanels = 1;
   let currentIndex = 0;
 
-  // ---------- UI ----------
+  // Zoom-Status: Swipe nur wenn nicht gezoomt
+  function isZoomed() {
+    return !!window.visualViewport && window.visualViewport.scale > 1.01;
+  }
+
   function showEndButtons(show, hasNextStory) {
     if (show) {
       nextBtn.style.display = "none";
@@ -158,9 +171,35 @@
     }
   }
 
+  function getNextComicId() {
+    const i = comicsIndex.findIndex(c => c.id === currentComicId);
+    if (i < 0) return null;
+    const next = comicsIndex[i + 1];
+    return next ? next.id : null;
+  }
+
+  function goToList() {
+    window.location.href = "library.html";
+  }
+
+  function goToNextStory() {
+    const nextId = getNextComicId();
+    if (!nextId) return;
+    location.hash = encodeURIComponent(nextId);
+  }
+
+  function setImageWithFade(src) {
+    img.classList.remove("loaded");
+    img.onload = () => {
+      img.classList.add("loaded");
+      img.onload = null; // verhindert Mehrfach-Auslösen
+    };
+    img.src = src;
+  }
+
   function updateImage() {
     const file = panels[currentIndex] || "000.webp";
-    img.src = currentComicPath + file;
+    setImageWithFade(currentComicPath + file);
 
     progressEl.textContent = `${currentIndex + 1} / ${totalPanels}`;
     prevBtn.disabled = currentIndex === 0;
@@ -189,31 +228,31 @@
       currentIndex++;
       updateImage();
     }
-    // Wenn am Ende: Buttons erscheinen automatisch, kein Auto-Jump
   }
 
-  function goToList() {
-    window.location.href = "library.html";
-  }
+  // Buttons / Tap-Zonen
+  prevBtn.addEventListener("click", prev);
+  nextBtn.addEventListener("click", next);
+  backToListBtn.addEventListener("click", goToList);
+  nextStoryBtn.addEventListener("click", goToNextStory);
+  tapLeft.addEventListener("click", prev);
+  tapRight.addEventListener("click", next);
 
-  function getNextComicId() {
-    const i = comicsIndex.findIndex(c => c.id === currentComicId);
-    if (i < 0) return null;
-    const next = comicsIndex[i + 1];
-    return next ? next.id : null;
-  }
+  // Tastatur
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowLeft") prev();
+    if (e.key === "ArrowRight") next();
+  });
 
-  function goToNextStory() {
-    const nextId = getNextComicId();
-    if (!nextId) return;
-    // Hash wechseln -> wir reloaden den Comic
-    location.hash = encodeURIComponent(nextId);
-  }
-
-  // ---------- Touch Swipe ----------
+  // Swipe (nur wenn NICHT gezoomt und nur 1 Finger)
   let touchStartX = null, touchStartY = null;
 
   viewer.addEventListener("touchstart", (e) => {
+    if (e.touches.length !== 1) { // Pinch o.ä.
+      touchStartX = null;
+      touchStartY = null;
+      return;
+    }
     const t = e.touches[0];
     touchStartX = t.clientX;
     touchStartY = t.clientY;
@@ -221,6 +260,7 @@
 
   viewer.addEventListener("touchend", (e) => {
     if (touchStartX === null || touchStartY === null) return;
+    if (isZoomed()) return; // im Zoom nie navigieren
 
     const t = e.changedTouches[0];
     const dx = t.clientX - touchStartX;
@@ -239,21 +279,6 @@
     touchStartY = null;
   }, { passive: true });
 
-  // ---------- Events ----------
-  prevBtn.addEventListener("click", prev);
-  nextBtn.addEventListener("click", next);
-
-  backToListBtn.addEventListener("click", goToList);
-  nextStoryBtn.addEventListener("click", goToNextStory);
-
-  tapLeft.addEventListener("click", prev);
-  tapRight.addEventListener("click", next);
-
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "ArrowLeft") prev();
-    if (e.key === "ArrowRight") next();
-  });
-
   window.addEventListener("hashchange", () => {
     const newId = getComicIdFromUrl();
     loadComic(newId).catch(err => {
@@ -263,31 +288,23 @@
     });
   });
 
-  // ---------- Loading ----------
   async function loadComic(comicId) {
     currentComicId = comicId;
     currentComicPath = `comics/${currentComicId}/`;
 
-    // comic.json laden
     const data = await fetchJson(currentComicPath + "comic.json");
 
     titleEl.textContent = data.title || currentComicId;
     panels = Array.isArray(data.panels) ? data.panels : [];
     totalPanels = panels.length || 1;
 
-    // immer am Anfang starten
-    currentIndex = 0;
-
-    // End-Buttons initial verstecken
+    currentIndex = 0; // immer am Anfang starten
     showEndButtons(false, false);
-
     updateImage();
   }
 
   async function init() {
-    // Reihenfolge der Stories laden (für "Zur nächsten Geschichte")
     comicsIndex = await fetchJson("comics/index.json");
-
     const comicId = getComicIdFromUrl();
     await loadComic(comicId);
   }
@@ -297,9 +314,10 @@
     titleEl.textContent = "Fehler";
     progressEl.textContent = "—";
   });
+
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("sw.js").catch(console.error);
-    }
+  }
 </script>
 
 </body>
