@@ -79,6 +79,13 @@
       user-select: none;
       -webkit-user-drag: none;
       display: block;
+
+      /* 👇 Neu: Papier-/Seiten-Look */
+      background: #0f0f0f;
+      border-radius: 6px;
+      box-shadow:
+        0 8px 18px rgba(0, 0, 0, 0.6),   /* Tiefe */
+        0 0 0 1px rgba(255, 255, 255, 0.06); /* feiner heller Rand */
     }
 
     /* Peek-Layout: Mitte groß, Seiten schmal */
@@ -86,12 +93,17 @@
       width: 86vw;
       max-width: 980px;
       margin: 0 1.5vw;
+
+      /* Hauptpanel minimal stärker */
+      box-shadow:
+        0 10px 22px rgba(0, 0, 0, 0.55),
+        0 2px 6px rgba(0, 0, 0, 0.7);
     }
 
     .panel.side {
       width: 10vw;
-      opacity: 0.55;
-      filter: saturate(0.9);
+      opacity: 0.5;
+      filter: saturate(0.85);
     }
 
     /* Wenn es kein prev/next gibt, „schieben“ wir den Peek-Bereich weg

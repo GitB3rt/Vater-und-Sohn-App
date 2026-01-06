@@ -5,3 +5,8 @@ Thumbs.db
 _local/
 output/
 *.log
+**/.venv/
+**/__pycache__/
+*.pyc
+tools/Vater_und_Sohn_Bildstrecke
+tools/input_scans/
