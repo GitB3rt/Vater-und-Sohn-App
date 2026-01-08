@@ -29,6 +29,34 @@ def find_repo_root(marker_dirname: str = "vaterundsohnApp") -> Path:
 # Image helpers
 # ----------------------------
 
+def normalize_bw_bgr(img_bgr, black_p=1.0, white_p=99.0, ref_low=None, ref_high=None):
+    """
+    Normalize a B/W scan so whites are consistent.
+    Uses percentile-based black/white points (contrast stretch).
+
+    If ref_low/ref_high are provided, they are used (recommended: compute once per page,
+    apply to all panels so the whole comic matches).
+    """
+    gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
+
+    if ref_low is None or ref_high is None:
+        low = float(np.percentile(gray, black_p))
+        high = float(np.percentile(gray, white_p))
+    else:
+        low, high = float(ref_low), float(ref_high)
+
+    # Avoid division by zero / degenerate scans
+    if high - low < 1e-6:
+        return img_bgr
+   
+    # Contrast stretch
+    g = gray.astype(np.float32)
+    g = (g - low) * (255.0 / (high - low))
+    g = np.clip(g, 0, 255).astype(np.uint8)
+
+    # Convert back to BGR so the rest of your pipeline stays unchanged
+    return cv2.cvtColor(g, cv2.COLOR_GRAY2BGR)
+
 def cv_imread_unicode(path: str, flags=cv2.IMREAD_COLOR):
     """
     Robust image loader for Windows paths containing umlauts / unicode.
@@ -191,6 +219,7 @@ def extract_one_to_vus_folder(
     target_width: int = 380,
     base_pad: int = 14,
     debug: bool = True,
+    normalize: bool = True,
 ):
     """
     Write to out_root/<vus_id>/:
@@ -203,6 +232,14 @@ def extract_one_to_vus_folder(
     img = cv_imread_unicode(in_path, cv2.IMREAD_COLOR)
     if img is None:
         raise RuntimeError(f"Kann Datei nicht lesen: {in_path}")
+    # Compute normalization reference once per page (so all panels match)
+    gray_page = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    ref_low = float(np.percentile(gray_page, 1.0))
+    ref_high = float(np.percentile(gray_page, 99.0))
+
+    # Safety guard
+    if ref_high <= ref_low:
+        ref_low, ref_high = 0.0, 255.0
 
     title = os.path.splitext(os.path.basename(in_path))[0]
     out_dir = os.path.join(out_root, vus_id)
@@ -251,6 +288,12 @@ def extract_one_to_vus_folder(
         scale = target_width / cw
         new_h = max(1, int(round(ch * scale)))
         crop_resized = cv2.resize(crop, (target_width, new_h), interpolation=cv2.INTER_AREA)
+        if normalize:
+            crop_resized = normalize_bw_bgr(
+                crop_resized,
+                ref_low=ref_low,
+                ref_high=ref_high
+            )
 
         fname = f"{out_idx:03d}.webp"
         save_webp_bgr(crop_resized, os.path.join(out_dir, fname), quality=92)
@@ -353,6 +396,7 @@ if __name__ == "__main__":
     ap.add_argument("--out_dir", default=str(default_out), help="Output root folder (will contain vus_XXX folders)")
     ap.add_argument("--no_debug", action="store_true", help="Disable debug output")
     ap.add_argument("--start", type=int, default=1, help="Start index for vus_XXX (default 1)")
+    
     args = ap.parse_args()
 
     print(f"Repo-Root: {repo_root}")
