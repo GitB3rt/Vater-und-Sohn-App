@@ -7,15 +7,32 @@
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.webmanifest">
-  <meta name="theme-color" content="#111111">
+  <meta name="theme-color" content="#fbfbf8">
   <link rel="icon" href="assets/icon-192.png">
 
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600&display=swap" rel="stylesheet">
+
   <style>
+    :root{
+      /* One single "paper white" for EVERYTHING */
+      --paper: #ffffff;       /* slightly warm, brighter than before */
+      --ink: #111;
+      --line: rgba(0,0,0,0.12);
+      --shadow: rgba(0,0,0,0.10);
+
+      /* Nav buttons */
+      --nav-bg: rgba(255,255,255,0.78);
+      --nav-border: rgba(0,0,0,0.18);
+      --nav-shadow: rgba(0,0,0,0.16);
+    }
+
     body {
       margin: 0;
-      background: #111;
-      color: white;
-      font-family: sans-serif;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: "Jost", system-ui, sans-serif;
       display: flex;
       flex-direction: column;
       height: 100vh;
@@ -30,7 +47,8 @@
       align-items: center;
       gap: 10px;
       padding: 8px 10px;
-      background: #1b1b1b;
+      background: var(--paper);
+      border-bottom: 1px solid var(--line);
       font-size: 14px;
     }
     #topbar .center {
@@ -42,9 +60,9 @@
       opacity: 0.95;
     }
     #topbar a {
-      color: white;
+      color: var(--ink);
       text-decoration: none;
-      opacity: 0.85;
+      opacity: 0.9;
     }
 
     /* ===== Viewer ===== */
@@ -53,111 +71,126 @@
       flex: 1;
       overflow: hidden;
       touch-action: pan-y pinch-zoom;
-      background: #111;
+      background: var(--paper);
+      display: grid;
+      place-items: center;
+      padding: 12px 0;
     }
 
-    /* ===== Carousel / Slide + Peek ===== */
-    .carousel {
-      height: 100%;
+    /* Single panel image — no box, no different whites */
+    #panelImg {
+      width: min(620px, 94vw);                 /* slightly larger */
+      height: auto;
+      max-height: calc(100vh - 140px);         /* leave room for topbar + dots + end controls */
+      object-fit: contain;
+      display: block;
+      background: transparent;                /* EXACT SAME as page */
+      -webkit-user-drag: none;
+
+      opacity: 1;
+      transition: opacity 160ms ease;
+    }
+    #panelImg.is-fading { opacity: 0; }
+
+    /* Overlay nav arrows (left/right) */
+    .navBtn{
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 40px;
+      height: 40px;
+      border-radius: 999px;
+      border: 1px solid var(--nav-border);
+      background: var(--nav-bg);
+      box-shadow: 0 8px 20px var(--nav-shadow);
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      z-index: 5;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .navBtn:disabled{
+      opacity: 0.35;
+      cursor: default;
+      box-shadow: none;
+    }
+
+    .navPrev{ left: 10px; }
+    .navNext{ right: 10px; }
+
+    /* Make buttons easier to hit on touch */
+    @media (pointer: coarse){
+      .navBtn{ width: 46px; height: 46px; }
+      .navPrev{ left: 8px; }
+      .navNext{ right: 8px; }
+    }
+
+    /* Simple inline SVG arrow sizing */
+    .navBtn svg{
+      width: 18px;
+      height: 18px;
+      display: block;
+      fill: none;
+      stroke: var(--ink);
+      stroke-width: 2.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      opacity: 0.95;
+    }
+
+    /* Dots */
+    #dots {
+      position: absolute;
+      bottom: 10px;
       width: 100%;
       display: flex;
-      align-items: center;
       justify-content: center;
-      will-change: transform;
-      transform: translateX(0px);
-      transition: transform 180ms ease;
+      align-items: center;
+      gap: 8px;
+      pointer-events: auto;
+      z-index: 4;
     }
 
-    .carousel.dragging {
-      transition: none;
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: rgba(0,0,0,0.25);
+      cursor: pointer;
+    }
+    .dot.active {
+      background: rgba(0,0,0,0.78);
+      transform: scale(1.2);
     }
 
-    .panel {
-      height: 100%;
-      object-fit: contain;
-      flex: 0 0 auto;
-      user-select: none;
-      -webkit-user-drag: none;
-      display: block;
-
-      /* 👇 Neu: Papier-/Seiten-Look */
-      background: #0f0f0f;
-      border-radius: 6px;
-      box-shadow:
-        0 8px 18px rgba(0, 0, 0, 0.6),   /* Tiefe */
-        0 0 0 1px rgba(255, 255, 255, 0.06); /* feiner heller Rand */
+    /* End controls (only last panel) */
+    #endControls{
+      display: none;
+      font-family: inherit;
+      gap: 10px;
+      padding: 10px;
+      background: rgba(255,255,255,0.55);
+      border-top: 1px solid var(--line);
+      backdrop-filter: blur(6px);
     }
-
-    /* Peek-Layout: Mitte groß, Seiten schmal */
-    .panel.current {
-      width: 86vw;
-      max-width: 980px;
-      margin: 0 1.5vw;
-
-      /* Hauptpanel minimal stärker */
-      box-shadow:
-        0 10px 22px rgba(0, 0, 0, 0.55),
-        0 2px 6px rgba(0, 0, 0, 0.7);
+    #endControls button{
+      flex: 1;
+      font-family: inherit;
+      font-size: 15px;
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 1px solid rgba(0,0,0,0.18);
+      background: rgba(255,255,255,0.85);
+      color: var(--ink);
+      cursor: pointer;
     }
-
-    .panel.side {
-      width: 10vw;
-      opacity: 0.5;
-      filter: saturate(0.85);
-    }
-
-    /* Wenn es kein prev/next gibt, „schieben“ wir den Peek-Bereich weg
-       -> kein schwarzer Balken links/rechts */
-    #viewer.no-prev .panel.prev {
-      width: 0 !important;
-      opacity: 0 !important;
-      margin: 0 !important;
-      pointer-events: none;
-    }
-
-    #viewer.no-next .panel.next {
-      width: 0 !important;
-      opacity: 0 !important;
-      margin: 0 !important;
-      pointer-events: none;
-    }
+    #endControls button:disabled{ opacity: 0.45; cursor: default; }
 
     @media (max-width: 420px) {
-      .panel.current { width: 84vw; margin: 0 2vw; }
-      .panel.side { width: 12vw; }
+      #panelImg { width: min(720px, 96vw); }
+      #endControls button{ font-size: 15px; padding: 10px 12px; }
     }
-
-    /* Tap-Zonen (Desktop hilfreich, Mobile stören beim Zoom) */
-    .tap-zone {
-      position: absolute;
-      top: 0;
-      bottom: 0;
-      width: 50%;
-      z-index: 2;
-    }
-    #tapLeft { left: 0; }
-    #tapRight { right: 0; }
-
-    @media (pointer: coarse) {
-      .tap-zone { display: none; }
-    }
-
-    /* ===== Controls ===== */
-    #controls {
-      display: flex;
-      justify-content: space-between;
-      padding: 10px;
-      background: #222;
-      gap: 10px;
-    }
-
-    button {
-      flex: 1;
-      font-size: 18px;
-      padding: 10px 20px;
-    }
-
-    button:disabled { opacity: 0.4; }
   </style>
 </head>
 <body>
@@ -169,23 +202,28 @@
   </div>
 
   <div id="viewer">
-    <div id="carousel" class="carousel">
-      <img id="panelPrev" class="panel side prev" src="" alt="">
-      <img id="panelCurrent" class="panel current" src="" alt="Comic Panel">
-      <img id="panelNext" class="panel side next" src="" alt="">
-    </div>
+    <!-- Left / Right arrows -->
+    <button id="navPrev" class="navBtn navPrev" aria-label="Zurück">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M15 18l-6-6 6-6"></path>
+      </svg>
+    </button>
 
-    <div id="tapLeft" class="tap-zone" title="Zurück"></div>
-    <div id="tapRight" class="tap-zone" title="Weiter"></div>
+    <img id="panelImg" src="" alt="Comic Panel">
+
+    <button id="navNext" class="navBtn navNext" aria-label="Weiter">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M9 6l6 6-6 6"></path>
+      </svg>
+    </button>
+
+    <div id="dots" aria-label="Panel positions"></div>
   </div>
 
-  <div id="controls">
-    <button id="prev">◀ Zurück</button>
-    <button id="next">Weiter ▶</button>
-
-    <!-- Diese beiden erscheinen nur beim letzten Bild -->
-    <button id="backToList" style="display:none;">Zurück zur Auswahl</button>
-    <button id="nextStory" style="display:none;">Zur nächsten Geschichte ▶</button>
+  <!-- Only visible on last panel -->
+  <div id="endControls">
+    <button id="backToList">Zurück zur Auswahl</button>
+    <button id="nextStory">Zur nächsten Geschichte ▶</button>
   </div>
 
   <script>
@@ -202,20 +240,18 @@
     }
 
     // DOM
-    const prevBtn = document.getElementById("prev");
-    const nextBtn = document.getElementById("next");
-    const backToListBtn = document.getElementById("backToList");
-    const nextStoryBtn = document.getElementById("nextStory");
     const progressEl = document.getElementById("progress");
     const viewer = document.getElementById("viewer");
-    const tapLeft = document.getElementById("tapLeft");
-    const tapRight = document.getElementById("tapRight");
     const titleEl = document.getElementById("title");
+    const img = document.getElementById("panelImg");
+    const dotsEl = document.getElementById("dots");
 
-    const carousel = document.getElementById("carousel");
-    const imgPrev = document.getElementById("panelPrev");
-    const imgCur  = document.getElementById("panelCurrent");
-    const imgNext = document.getElementById("panelNext");
+    const navPrev = document.getElementById("navPrev");
+    const navNext = document.getElementById("navNext");
+
+    const endControls = document.getElementById("endControls");
+    const backToListBtn = document.getElementById("backToList");
+    const nextStoryBtn = document.getElementById("nextStory");
 
     // State
     let comicsIndex = [];
@@ -225,23 +261,8 @@
     let totalPanels = 1;
     let currentIndex = 0;
 
-    // FIX (2): Sperre während Slide-Animation (verhindert Bild 7/6)
-    let isAnimating = false;
-
     function isZoomed() {
       return !!window.visualViewport && window.visualViewport.scale > 1.01;
-    }
-
-    function showEndButtons(show, hasNextStory) {
-      if (show) {
-        nextBtn.style.display = "none";
-        backToListBtn.style.display = "";
-        nextStoryBtn.style.display = hasNextStory ? "" : "none";
-      } else {
-        nextBtn.style.display = "";
-        backToListBtn.style.display = "none";
-        nextStoryBtn.style.display = "none";
-      }
     }
 
     function getNextComicId() {
@@ -265,93 +286,74 @@
       return panels[i] || "000.webp";
     }
 
-    // FIX (1): Peek nur zeigen, wenn prev/next existiert -> kein schwarzer Balken
-    function updatePeekClasses() {
-      viewer.classList.toggle("no-prev", currentIndex === 0);
-      viewer.classList.toggle("no-next", currentIndex >= totalPanels - 1);
+    function setSrcWithFade(newSrc) {
+      img.classList.add("is-fading");
+      setTimeout(() => { img.src = newSrc; }, 120);
+      img.onload = () => img.classList.remove("is-fading");
     }
 
-    function setImages() {
-      imgCur.src = currentComicPath + fileAt(currentIndex);
-
-      if (currentIndex > 0) {
-        imgPrev.src = currentComicPath + fileAt(currentIndex - 1);
-      } else {
-        imgPrev.src = "";
+    function renderDots() {
+      dotsEl.innerHTML = "";
+      for (let i = 0; i < totalPanels; i++) {
+        const d = document.createElement("div");
+        d.className = "dot" + (i === currentIndex ? " active" : "");
+        d.addEventListener("click", () => goTo(i));
+        dotsEl.appendChild(d);
       }
+    }
 
-      if (currentIndex < totalPanels - 1) {
-        imgNext.src = currentComicPath + fileAt(currentIndex + 1);
-      } else {
-        imgNext.src = "";
+    function updateDots() {
+      const dots = dotsEl.children;
+      for (let i = 0; i < dots.length; i++) {
+        dots[i].classList.toggle("active", i === currentIndex);
       }
+    }
 
-      updatePeekClasses();
-
+    function updateUI() {
       progressEl.textContent = `${currentIndex + 1} / ${totalPanels}`;
-      prevBtn.disabled = currentIndex === 0;
 
+      const atStart = currentIndex === 0;
       const atEnd = currentIndex === totalPanels - 1;
-      showEndButtons(atEnd, Boolean(getNextComicId()));
+
+      navPrev.disabled = atStart;
+      navNext.disabled = atEnd;
+
+      // Show end controls ONLY at end
+      endControls.style.display = atEnd ? "flex" : "none";
+
+      // Only show "next story" if it exists
+      nextStoryBtn.style.display = (atEnd && !!getNextComicId()) ? "" : "none";
+
+      updateDots();
     }
 
-    function currentStepWidth() {
-      const rect = imgCur.getBoundingClientRect();
-      const cs = getComputedStyle(imgCur);
-      const ml = parseFloat(cs.marginLeft) || 0;
-      const mr = parseFloat(cs.marginRight) || 0;
-      return rect.width + ml + mr;
+    function setImage() {
+      const src = currentComicPath + fileAt(currentIndex);
+      setSrcWithFade(src);
+      updateUI();
     }
 
-    // Slide animation helper
-    function slideTo(direction) {
-      if (isAnimating) return;
-
-      const targetIndex = currentIndex + direction;
-      if (targetIndex < 0 || targetIndex > totalPanels - 1) return;
-
-      isAnimating = true;
-
-      const width = currentStepWidth();
-      carousel.classList.remove("dragging");
-      carousel.style.transform = `translateX(${direction * -width}px)`;
-
-      const onDone = () => {
-        carousel.removeEventListener("transitionend", onDone);
-
-        currentIndex = targetIndex;
-
-        // reset transform instantly + update images
-        carousel.classList.add("dragging");
-        carousel.style.transform = "translateX(0px)";
-        setImages();
-
-        requestAnimationFrame(() => {
-          carousel.classList.remove("dragging");
-          isAnimating = false;
-        });
-      };
-
-      carousel.addEventListener("transitionend", onDone);
+    function goTo(i) {
+      if (i < 0 || i >= totalPanels) return;
+      currentIndex = i;
+      setImage();
     }
 
     function prev() {
       if (currentIndex === 0) return;
-      slideTo(-1);
+      goTo(currentIndex - 1);
     }
 
     function next() {
       if (currentIndex >= totalPanels - 1) return;
-      slideTo(+1);
+      goTo(currentIndex + 1);
     }
 
-    // Buttons / tap zones
-    prevBtn.addEventListener("click", prev);
-    nextBtn.addEventListener("click", next);
+    // Buttons
+    navPrev.addEventListener("click", prev);
+    navNext.addEventListener("click", next);
     backToListBtn.addEventListener("click", goToList);
     nextStoryBtn.addEventListener("click", goToNextStory);
-    tapLeft.addEventListener("click", prev);
-    tapRight.addEventListener("click", next);
 
     // Keyboard
     document.addEventListener("keydown", (e) => {
@@ -359,55 +361,24 @@
       if (e.key === "ArrowRight") next();
     });
 
-    // Drag / Swipe (only when not zoomed, and not animating)
-    let dragging = false;
+    // Swipe (no dragging transform; better on mobile)
     let startX = 0;
-    let lastX = 0;
 
     viewer.addEventListener("touchstart", (e) => {
       if (e.touches.length !== 1) return;
       if (isZoomed()) return;
-      if (isAnimating) return;
-
-      dragging = true;
       startX = e.touches[0].clientX;
-      lastX = startX;
-      carousel.classList.add("dragging");
     }, { passive: true });
 
-    viewer.addEventListener("touchmove", (e) => {
-      if (!dragging) return;
-      const x = e.touches[0].clientX;
-      lastX = x;
-      const dx = x - startX;
-      carousel.style.transform = `translateX(${dx}px)`;
-    }, { passive: true });
+    viewer.addEventListener("touchend", (e) => {
+      if (!startX) return;
+      const endX = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0].clientX : startX;
+      const dx = endX - startX;
+      startX = 0;
 
-    viewer.addEventListener("touchend", () => {
-      if (!dragging) return;
-      dragging = false;
-
-      const dx = lastX - startX;
       const threshold = Math.min(80, window.innerWidth * 0.12);
-
-      carousel.classList.remove("dragging");
-
-      if (dx < -threshold) {
-        if (currentIndex < totalPanels - 1) {
-          carousel.style.transform = "translateX(0px)";
-          next();
-          return;
-        }
-      } else if (dx > threshold) {
-        if (currentIndex > 0) {
-          carousel.style.transform = "translateX(0px)";
-          prev();
-          return;
-        }
-      }
-
-      // snap back
-      carousel.style.transform = "translateX(0px)";
+      if (dx < -threshold) next();
+      else if (dx > threshold) prev();
     }, { passive: true });
 
     // Hash change (next story)
@@ -430,13 +401,10 @@
       panels = Array.isArray(data.panels) ? data.panels : [];
       totalPanels = panels.length || 1;
 
-      currentIndex = 0; // always start at beginning
-      isAnimating = false;
+      currentIndex = 0;
 
-      carousel.classList.add("dragging");
-      carousel.style.transform = "translateX(0px)";
-      setImages();
-      requestAnimationFrame(() => carousel.classList.remove("dragging"));
+      renderDots();
+      setImage();
     }
 
     async function init() {
@@ -450,8 +418,8 @@
       progressEl.textContent = "—";
     });
 
-    // Service Worker (falls jemand direkt viewer.html öffnet)
-    if ("serviceWorker" in navigator) {
+    // Service Worker (disable on localhost for easier development)
+    if ("serviceWorker" in navigator && location.hostname !== "localhost") {
       navigator.serviceWorker.register("sw.js").catch(console.error);
     }
   </script>
