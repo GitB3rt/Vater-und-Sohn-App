@@ -13,15 +13,17 @@
   <style>
     body {
       margin: 0;
-      background: #111;
-      color: white;
+      background: #fafafa;
+      color: #111;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
     }
 
     header {
       padding: 16px;
       font-size: 22px;
-      background: #1b1b1b;
+      background: #ffffff;
+      color: #000;
+      border-bottom: 1px solid #ddd;;
     }
 
     /* ===== FILTER BAR ===== */
@@ -30,12 +32,13 @@
       gap: 10px;
       padding: 12px 16px;
       overflow-x: auto;
-      background: #111;
+      background: #f5f5f5;
+      border-bottom: 1px solid #ddd;
     }
 
     .filters button {
-      background: #222;
-      color: white;
+      background: #e6e6e6;
+      color: #111;
       border: none;
       border-radius: 999px;
       padding: 8px 14px;
@@ -45,8 +48,8 @@
     }
 
     .filters button.active {
-      background: #fff;
-      color: #111;
+      background: #111;
+      color: #fff;
     }
 
     main {
@@ -57,7 +60,7 @@
     .grid {
       display: grid;
       gap: 16px;
-      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
     }
 
     /* ===== TILE ===== */
@@ -67,11 +70,11 @@
     }
 
     .cover {
-      aspect-ratio: 1 / 1;
-      border-radius: 14px;
+      aspect-ratio: 4 / 3;
+      border-radius: 12px;
       overflow: hidden;
-      background: #222;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+      background: #fff;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
     }
 
     .cover img {
@@ -79,6 +82,7 @@
       height: 100%;
       object-fit: cover;
       display: block;
+      background: #fff;
     }
 
     .title {
@@ -98,7 +102,7 @@
       align-items: center;
       padding: 16px;
       font-size: 22px;
-      background: #1b1b1b;
+      background: #ffffff;
     }
 
     /* Info-Button */

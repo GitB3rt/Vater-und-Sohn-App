@@ -69,8 +69,8 @@
 
     // Fallback: spätestens nach 6 Sekunden weiter (falls ended nicht feuert)
     setTimeout(goNext, 6000);
-    if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("sw.js").catch(console.error);
+    if ("serviceWorker" in navigator && location.hostname !== "localhost") {
+      navigator.serviceWorker.register("/sw.js");
     }
   </script>
 </body>

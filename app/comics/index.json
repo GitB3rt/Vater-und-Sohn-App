@@ -5,7 +5,7 @@
     "cover": "comics/vus_001/cover.webp",
     "tags": [
       "dummy_tag_1",
-      "ostern"
+      "dummy_tag_2"
     ]
   },
   {
@@ -13,7 +13,7 @@
     "title": "Das fesselnde Buch",
     "cover": "comics/vus_002/cover.webp",
     "tags": [
-      "weihnachten",
+      "dummy_tag_1",
       "dummy_tag_2"
     ]
   },
@@ -85,7 +85,7 @@
     "title": "Die werden's nie kapieren!",
     "cover": "comics/vus_010/cover.webp",
     "tags": [
-      "ostern",
+      "dummy_tag_1",
       "dummy_tag_2"
     ]
   },
@@ -139,7 +139,7 @@
     "title": "So nicht",
     "cover": "comics/vus_016/cover.webp",
     "tags": [
-      "fsk12",
+      "dummy_tag_1",
       "dummy_tag_2"
     ]
   },
