@@ -57,11 +57,40 @@ def normalize_bw_bgr(img_bgr, black_p=1.0, white_p=99.0, ref_low=None, ref_high=
     # Convert back to BGR so the rest of your pipeline stays unchanged
     return cv2.cvtColor(g, cv2.COLOR_GRAY2BGR)
 
-def cv_imread_unicode(path: str, flags=cv2.IMREAD_COLOR):
+def cv_imread_unicode(path: str, flags=cv2.IMREAD_COLOR, gif_frame: int = 0):
     """
     Robust image loader for Windows paths containing umlauts / unicode.
-    Uses np.fromfile + cv2.imdecode instead of cv2.imread.
+    - For GIF: load via PIL (handles palette + transparency + animation)
+    - Else: use np.fromfile + cv2.imdecode
+    Returns OpenCV image (BGR).
     """
+    suffix = Path(path).suffix.lower()
+
+    # --- GIF via PIL ---
+    if suffix == ".gif":
+        try:
+            im = Image.open(path)
+
+            # If animated, select a frame
+            try:
+                im.seek(gif_frame)
+            except EOFError:
+                im.seek(0)
+
+            # Convert to RGBA to handle transparency reliably
+            im = im.convert("RGBA")
+
+            # Composite on white background (important for transparent GIFs)
+            bg = Image.new("RGBA", im.size, (255, 255, 255, 255))
+            im = Image.alpha_composite(bg, im).convert("RGB")
+
+            rgb = np.array(im)  # HxWx3 RGB
+            bgr = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
+            return bgr
+        except Exception:
+            return None
+
+    # --- Everything else via OpenCV ---
     try:
         data = np.fromfile(path, dtype=np.uint8)
         img = cv2.imdecode(data, flags)
@@ -335,7 +364,7 @@ def batch_to_vus(in_dir: str, out_dir: str, debug: bool = True, start_index: int
     Creates out_dir/index.json with one entry per folder.
     Continues on errors instead of aborting the whole batch.
     """
-    exts = (".jpg", ".jpeg", ".png", ".tif", ".tiff", ".webp")
+    exts = (".jpg", ".jpeg", ".png", ".tif", ".tiff", ".webp", ".gif")
     files = sorted([f for f in os.listdir(in_dir) if f.lower().endswith(exts)])
 
     if not files:

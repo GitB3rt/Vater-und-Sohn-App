@@ -363,23 +363,57 @@
 
     // Swipe (no dragging transform; better on mobile)
     let startX = 0;
+    let startY = 0;
 
     viewer.addEventListener("touchstart", (e) => {
       if (e.touches.length !== 1) return;
       if (isZoomed()) return;
+
       startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
     }, { passive: true });
 
-    viewer.addEventListener("touchend", (e) => {
-      if (!startX) return;
-      const endX = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0].clientX : startX;
-      const dx = endX - startX;
-      startX = 0;
+      viewer.addEventListener("touchend", (e) => {
+        if (!startX || !startY) return;
 
-      const threshold = Math.min(80, window.innerWidth * 0.12);
-      if (dx < -threshold) next();
-      else if (dx > threshold) prev();
-    }, { passive: true });
+        const touch = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0] : null;
+        if (!touch) return;
+
+        const endX = touch.clientX;
+        const endY = touch.clientY;
+
+        const dx = endX - startX;
+        const dy = endY - startY;
+
+        startX = 0;
+        startY = 0;
+
+        const thresholdX = Math.min(80, window.innerWidth * 0.12);
+        const thresholdY = Math.min(80, window.innerHeight * 0.12);
+
+        // 1) Entscheide, ob es eher horizontal oder vertikal war
+        if (Math.abs(dx) > Math.abs(dy)) {
+          // Horizontal → Panel Navigation
+          if (dx < -thresholdX) next();
+          else if (dx > thresholdX) prev();
+          return;
+        }
+
+        // Vertikal → zurück zur Auswahl
+        // dy > 0 = nach unten gewischt
+        // dy < 0 = nach oben gewischt
+
+        // Variante A: Swipe NACH OBEN = zurück
+        if (dy < -thresholdY) {
+          goToList();
+        }
+
+        // Variante B (alternative): Swipe NACH UNTEN = zurück
+        // if (dy > thresholdY) {
+        //   goToList();
+        // }
+      }, { passive: true });
+
 
     // Hash change (next story)
     window.addEventListener("hashchange", () => {
