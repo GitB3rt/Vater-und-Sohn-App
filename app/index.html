@@ -59,11 +59,11 @@
     function startFadeThenGo() {
       if (didGoNext) return;
       document.body.classList.add("fade-out");
-      setTimeout(goNext, 1500); // nach Fade-Dauer weiter
+      setTimeout(goNext, 1100); // nach Fade-Dauer weiter
     }
 
     // 1,5s sichtbar, dann 1,5s fade
-    setTimeout(startFadeThenGo, 1500);
+    setTimeout(startFadeThenGo, 100);
 
     if ("serviceWorker" in navigator && location.hostname !== "localhost") {
       navigator.serviceWorker.register("/sw.js");

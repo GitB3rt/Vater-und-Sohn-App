@@ -10,7 +10,7 @@
   },
   {
     "id": "vus_002",
-    "title": "Das ist nicht Vater",
+    "title": "Toll - was der Vater kann",
     "cover": "comics/vus_002/cover.webp",
     "tags": [
       "weihnachten",
@@ -145,15 +145,6 @@
   },
   {
     "id": "vus_017",
-    "title": "Gute Gelegenheit",
-    "cover": "comics/vus_017/cover.webp",
-    "tags": [
-      "dummy_tag_1",
-      "dummy_tag_2"
-    ]
-  },
-  {
-    "id": "vus_018",
     "title": "Vorne lang, hinten kurz",
     "cover": "comics/vus_018/cover.webp",
     "tags": [
@@ -162,7 +153,7 @@
     ]
   },
   {
-    "id": "vus_019",
+    "id": "vus_018",
     "title": "Überraschung am Strand",
     "cover": "comics/vus_019/cover.webp",
     "tags": [

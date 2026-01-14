@@ -18,17 +18,13 @@
     :root{
       --paper: #ffffff;
       --ink: #111;
-      --line: rgba(0,0,0,0.08);
-
-      --chip: rgba(0,0,0,0.04);
-      --chipActive: #111;
-
-      --tileShadow: rgba(0,0,0,0.12);
-      --tileBorder: rgba(0,0,0,0.12);
 
       --overlay: rgba(0,0,0,0.65);
       --cardBg: #1e1e1e;
       --cardInk: #fff;
+
+      /* "hand-drawn" separator as SVG (slightly wobbly line) */
+      --scribble-sep: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='10' viewBox='0 0 1200 10'%3E%3Cpath d='M2 6 C 80 2, 160 10, 240 6 S 400 2, 480 6 S 640 10, 720 6 S 880 2, 960 6 S 1120 10, 1198 6' fill='none' stroke='%23111' stroke-width='2.2' stroke-linecap='round'/%3E%3C/svg%3E");
     }
 
     body {
@@ -38,97 +34,124 @@
       font-family: "Jost", Futura, "Futura PT", "Avenir Next", Avenir, system-ui, sans-serif;
     }
 
+    /* ===== Header Area ===== */
+    .headerArea{
+      background: var(--paper);
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+
     /* ===== Topbar ===== */
     .topbar {
-      display: flex;
-      justify-content: space-between;
+      display: grid;
+      grid-template-columns: 44px 1fr 44px;
       align-items: center;
-      padding: 16px;
+      padding: 14px 12px 12px;
       font-size: 22px;
       background: var(--paper);
-      border-bottom: 1px solid var(--line);
     }
 
-    /* Info-Button */
-    .info-btn {
-      font-size: 18px;
-      background: none;
-      border: none;
-      color: var(--ink);
-      cursor: pointer;
-      opacity: 0.75;
-    }
-    .info-btn:hover { opacity: 1; }
-
-    /* ===== FILTER BAR ===== */
-    .filters {
-      display: flex;
-      gap: 10px;
-      padding: 12px 16px;
-      overflow-x: auto;
-      background: var(--paper);
-      border-bottom: 1px solid var(--line);
+    .title {
+      text-align: center;
+      max-width: 720px;
+      margin: 0 auto;
+      line-height: 1.15;
     }
 
-    .filters button {
-      font-family: inherit;
+    .icon-btn{
+      width: 44px;
+      height: 44px;
+      display: grid;
+      place-items: center;
+      border: 1px solid transparent;
       background: transparent;
       color: var(--ink);
-      border: 1px solid transparent;
-      border-radius: 999px;
-      padding: 8px 14px;
-      font-size: 14px;
       cursor: pointer;
-      white-space: nowrap;
-      opacity: 0.75;
-      transition: background 120ms ease, border-color 120ms ease, opacity 120ms ease;
+      border-radius: 12px;
+      opacity: 0.82;
+      -webkit-tap-highlight-color: transparent;
+      padding: 0;
+    }
+    .icon-btn:active { transform: scale(0.98); opacity: 1; }
+
+    .icon-btn svg{
+      width: 20px;
+      height: 20px;
+      stroke: var(--ink);
+      fill: none;
+      stroke-width: 2.2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      opacity: 0.95;
+      display: block;
     }
 
-    .filters button:hover {
-      background: var(--chip);
-      opacity: 1;
+    /* hand-drawn separator under header */
+    .scribbleSep{
+      height: 10px;
+      margin-bottom: 8px;
+      background-image: var(--scribble-sep);
+      background-repeat: repeat-x;
+      background-position: center;
+      background-size: 1200px 10px;
+      opacity: 0.95;
     }
 
-    .filters button.active {
-      background: var(--chipActive);
-      color: #fff;
-      border-color: var(--chipActive);
-      opacity: 1;
+    /* ===== Search (toggle) ===== */
+    .searchRow{
+      display: none;
+      padding: 10px 12px 12px;
+    }
+    .searchRow.open{ display: block; }
+
+    .searchInput{
+      width: 100%;
+      box-sizing: border-box;
+      font-family: inherit;
+      font-size: 15px;
+      padding: 12px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(0,0,0,0.14);
+      background: transparent;
+      outline: none;
     }
 
-    main { padding: 16px; }
+    /* ===== Main / Grid ===== */
+    main { padding: 12px 16px 16px; }
 
-    /* ===== GRID ===== */
     .grid {
       display: grid;
-      gap: 16px;
+      row-gap: 20px;
+      column-gap: 16px;
       grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      align-items: start;
     }
 
-    /* ===== TILE ===== */
+    /* ===== TILE (super lean, no frame/box) ===== */
     .tile {
       cursor: pointer;
       text-align: center;
-      transition: transform 120ms ease;
+      -webkit-tap-highlight-color: transparent;
+
+      /* ✅ makes tile always be "image area + title area" -> more consistent */
+      display: grid;
+      grid-template-rows: auto auto;
     }
 
-    /* Normal: komplett flach */
+    /* Default slot */
     .cover {
       aspect-ratio: 4 / 3;
-      border-radius: 12px;
+      border-radius: 0;
       overflow: hidden;
       background: transparent;
-      border: 1px solid transparent;
+      border: 0;
       box-shadow: none;
-      transition: box-shadow 140ms ease, border-color 140ms ease, transform 140ms ease;
     }
 
-    /* Hover: hebt sich ab */
-    .tile:hover .cover,
-    .tile:focus-within .cover {
-      border-color: var(--tileBorder);
-      box-shadow: 0 8px 22px var(--tileShadow);
-      transform: translateY(-1px);
+    /* ✅ Mobile / touch: Wide slot for very wide covers (reduces white gaps) */
+    .tile.wide .cover{
+      aspect-ratio: 16 / 9;
     }
 
     .cover img {
@@ -139,16 +162,20 @@
       background: transparent;
     }
 
-    .title {
-      margin-top: 8px;
+    .tileTitle {
+      margin-top: 4px;
       font-size: 15px;
       line-height: 1.3;
-      opacity: 0.9;
+      opacity: 0.92;
     }
 
-    .tile:active .cover {
-      transform: scale(0.99);
-      box-shadow: 0 6px 16px var(--tileShadow);
+    .tile:active .cover { transform: scale(0.99); }
+
+    /* ✅ FIX for Desktop/Web: keep all covers same height so titles align in a row */
+    @media (pointer: fine){
+      .tile.wide .cover{
+        aspect-ratio: 4 / 3; /* override wide on desktop -> titles on one line */
+      }
     }
 
     /* ===== Info Overlay ===== */
@@ -192,23 +219,48 @@
       display: block;
       text-align: right;
       cursor: pointer;
-      opacity: 0.8;
+      opacity: 0.85;
+    }
+
+    /* Small screens */
+    @media (max-width: 420px){
+      .topbar{ padding: 14px 10px 10px; font-size: 20px; }
+      .grid{ grid-template-columns: 1fr; }
+      main{ padding: 0 12px 14px; }
     }
   </style>
 </head>
 <body>
 
-  <header class="topbar">
-    <div>Vater und Sohn Bildergeschichten</div>
-    <button id="infoBtn" class="info-btn" aria-label="Info">ⓘ</button>
-  </header>
+  <div class="headerArea">
+    <header class="topbar">
+      <!-- Search icon (left) -->
+      <button id="searchBtn" class="icon-btn" aria-label="Suchen">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="11" cy="11" r="7"></circle>
+          <path d="M20 20l-3.5-3.5"></path>
+        </svg>
+      </button>
 
-  <!-- FILTER -->
-  <div class="filters">
-    <button data-filter="all" class="active">Alle</button>
-    <button data-filter="weihnachten">Filter1</button>
-    <button data-filter="ostern">Filter2</button>
-    <button data-filter="fsk12">FSK 12</button>
+      <div class="title">Vater und Sohn Bildergeschichten</div>
+
+      <!-- Info (right) -->
+      <button id="infoBtn" class="icon-btn" aria-label="Info">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="9"></circle>
+          <path d="M12 10.5v6"></path>
+          <path d="M12 7.5h.01"></path>
+        </svg>
+      </button>
+    </header>
+
+    <!-- hand-drawn separator like comic border -->
+    <div class="scribbleSep" aria-hidden="true"></div>
+
+    <!-- Search (hidden until click) -->
+    <div id="searchRow" class="searchRow" aria-hidden="true">
+      <input id="searchInput" class="searchInput" type="search" placeholder="Geschichten suchen…" autocomplete="off" />
+    </div>
   </div>
 
   <!-- GRID -->
@@ -246,10 +298,15 @@
 
   <script>
     let allComics = [];
-    let activeFilter = "all";
+    let searchQuery = "";
 
     const grid = document.getElementById("grid");
-    const filterButtons = document.querySelectorAll(".filters button");
+
+    const searchBtn = document.getElementById("searchBtn");
+    const searchRow = document.getElementById("searchRow");
+    const searchInput = document.getElementById("searchInput");
+
+    function norm(s){ return (s || "").toString().trim().toLowerCase(); }
 
     async function loadComics() {
       try {
@@ -262,16 +319,19 @@
       }
     }
 
+    function applySearch(list){
+      const q = norm(searchQuery);
+      if (!q) return list;
+      return list.filter(c => norm(c.title).includes(q));
+    }
+
     function render() {
       grid.innerHTML = "";
 
-      const filtered =
-        activeFilter === "all"
-          ? allComics
-          : allComics.filter(c => (c.tags || []).includes(activeFilter));
+      const filtered = applySearch(allComics);
 
       if (filtered.length === 0) {
-        grid.innerHTML = "<div>Keine Geschichten gefunden.</div>";
+        grid.innerHTML = "<div style='padding:16px 0;'>Keine Geschichten gefunden.</div>";
         return;
       }
 
@@ -289,6 +349,13 @@
         img.loading = "lazy";
         img.alt = "";
         img.src = preferredCover;
+
+        // ✅ Wide detection for mobile/touch devices
+        img.addEventListener("load", () => {
+          const r = img.naturalWidth / Math.max(1, img.naturalHeight);
+          if (r > 1.75) tile.classList.add("wide");
+        });
+
         img.onerror = () => {
           if (img.src.endsWith("000.webp")) return;
           img.src = fallbackCover;
@@ -297,7 +364,7 @@
         coverWrap.appendChild(img);
 
         const title = document.createElement("div");
-        title.className = "title";
+        title.className = "tileTitle";
         title.textContent = c.title;
 
         tile.appendChild(coverWrap);
@@ -311,13 +378,34 @@
       }
     }
 
-    filterButtons.forEach(btn => {
-      btn.addEventListener("click", () => {
-        filterButtons.forEach(b => b.classList.remove("active"));
-        btn.classList.add("active");
-        activeFilter = btn.dataset.filter;
+    // ===== Search toggle =====
+    function setSearchOpen(open){
+      searchRow.classList.toggle("open", open);
+      searchRow.setAttribute("aria-hidden", String(!open));
+      if (open) {
+        setTimeout(() => searchInput.focus(), 0);
+      } else {
+        searchInput.value = "";
+        searchQuery = "";
         render();
-      });
+      }
+    }
+
+    searchBtn.addEventListener("click", () => {
+      const open = !searchRow.classList.contains("open");
+      setSearchOpen(open);
+    });
+
+    searchInput.addEventListener("input", () => {
+      searchQuery = searchInput.value;
+      render();
+    });
+
+    // Close search with ESC
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        if (searchRow.classList.contains("open")) setSearchOpen(false);
+      }
     });
 
     loadComics();
@@ -326,6 +414,7 @@
       navigator.serviceWorker.register("sw.js").catch(console.error);
     }
 
+    // ===== Info overlay =====
     const infoBtn = document.getElementById("infoBtn");
     const infoOverlay = document.getElementById("infoOverlay");
     const infoClose = infoOverlay.querySelector(".info-close");

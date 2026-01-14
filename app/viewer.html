@@ -10,22 +10,27 @@
   <meta name="theme-color" content="#fbfbf8">
   <link rel="icon" href="assets/icon-192.png">
 
+  <!-- Base UI font -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600&display=swap" rel="stylesheet">
 
   <style>
     :root{
-      /* One single "paper white" for EVERYTHING */
-      --paper: #ffffff;       /* slightly warm, brighter than before */
+      --paper: #ffffff;
       --ink: #111;
       --line: rgba(0,0,0,0.12);
-      --shadow: rgba(0,0,0,0.10);
 
-      /* Nav buttons */
       --nav-bg: rgba(255,255,255,0.78);
       --nav-border: rgba(0,0,0,0.18);
       --nav-shadow: rgba(0,0,0,0.16);
+    }
+
+    /* ✅ Prevent page scroll / bounce */
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      overscroll-behavior: none;
     }
 
     body {
@@ -50,6 +55,8 @@
       background: var(--paper);
       border-bottom: 1px solid var(--line);
       font-size: 14px;
+
+      transition: opacity 160ms ease, transform 160ms ease;
     }
     #topbar .center {
       flex: 1;
@@ -70,29 +77,39 @@
       position: relative;
       flex: 1;
       overflow: hidden;
-      touch-action: pan-y pinch-zoom;
+
+      /* ✅ stop 1-finger panning (prevents wobble), keep 2-finger pinch */
+      touch-action: pinch-zoom;
+
       background: var(--paper);
       display: grid;
       place-items: center;
       padding: 12px 0;
     }
 
-    /* Single panel image — no box, no different whites */
     #panelImg {
-      width: min(620px, 94vw);                 /* slightly larger */
+      width: min(620px, 94vw);
       height: auto;
-      max-height: calc(100vh - 140px);         /* leave room for topbar + dots + end controls */
+      max-height: calc(100vh - 140px);
       object-fit: contain;
       display: block;
-      background: transparent;                /* EXACT SAME as page */
+      background: transparent;
       -webkit-user-drag: none;
 
       opacity: 1;
-      transition: opacity 160ms ease;
+      transform: translateX(0);
+      transition: opacity 160ms ease, transform 200ms ease;
+      will-change: transform, opacity;
     }
     #panelImg.is-fading { opacity: 0; }
 
-    /* Overlay nav arrows (left/right) */
+    /* ✅ Story "Blättern" Animation (nur für Comic-Wechsel) */
+    #panelImg.story-exit-left  { transform: translateX(-42px); opacity: 0; }
+    #panelImg.story-exit-right { transform: translateX( 42px); opacity: 0; }
+
+    #panelImg.story-enter-from-right { transform: translateX(42px); opacity: 0; }
+    #panelImg.story-enter-from-left  { transform: translateX(-42px); opacity: 0; }
+
     .navBtn{
       position: absolute;
       top: 50%;
@@ -109,6 +126,8 @@
       z-index: 5;
       padding: 0;
       -webkit-tap-highlight-color: transparent;
+
+      transition: opacity 160ms ease, transform 160ms ease;
     }
     .navBtn:disabled{
       opacity: 0.35;
@@ -119,14 +138,12 @@
     .navPrev{ left: 10px; }
     .navNext{ right: 10px; }
 
-    /* Make buttons easier to hit on touch */
     @media (pointer: coarse){
       .navBtn{ width: 46px; height: 46px; }
       .navPrev{ left: 8px; }
       .navNext{ right: 8px; }
     }
 
-    /* Simple inline SVG arrow sizing */
     .navBtn svg{
       width: 18px;
       height: 18px;
@@ -139,7 +156,6 @@
       opacity: 0.95;
     }
 
-    /* Dots */
     #dots {
       position: absolute;
       bottom: 10px;
@@ -150,6 +166,8 @@
       gap: 8px;
       pointer-events: auto;
       z-index: 4;
+
+      transition: opacity 160ms ease, transform 160ms ease;
     }
 
     .dot {
@@ -164,7 +182,6 @@
       transform: scale(1.2);
     }
 
-    /* End controls (only last panel) */
     #endControls{
       display: none;
       font-family: inherit;
@@ -173,6 +190,8 @@
       background: rgba(255,255,255,0.55);
       border-top: 1px solid var(--line);
       backdrop-filter: blur(6px);
+
+      transition: opacity 160ms ease, transform 160ms ease;
     }
     #endControls button{
       flex: 1;
@@ -191,6 +210,109 @@
       #panelImg { width: min(720px, 96vw); }
       #endControls button{ font-size: 15px; padding: 10px 12px; }
     }
+
+    /* ===== Fokus-Lesemodus (UI ausblenden) ===== */
+    body.ui-hidden #topbar {
+      opacity: 0;
+      transform: translateY(-8px);
+      pointer-events: none;
+    }
+
+    body.ui-hidden .navBtn {
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(-50%) scale(0.98);
+    }
+
+    /* ✅ Dots bleiben im Fokusmodus sichtbar -> NICHT ausblenden */
+
+    body.ui-hidden #endControls {
+      opacity: 0;
+      transform: translateY(8px);
+      pointer-events: none;
+    }
+
+    /* im Fokusmodus mehr Höhe fürs Bild (weil Topbar weg ist) */
+    body.ui-hidden #panelImg{
+      max-height: calc(100vh - 40px);
+    }
+
+    /* ===== Titel-Overlay im Fokusmodus ===== */
+    #focusTitle {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+
+      max-width: min(92vw, 680px);
+      padding: 10px 14px;
+      border-radius: 999px;
+
+      background: rgba(255,255,255,0.78);
+      border: 1px solid rgba(0,0,0,0.10);
+      box-shadow: 0 10px 28px rgba(0,0,0,0.12);
+      backdrop-filter: blur(8px);
+
+      color: var(--ink);
+      font-family: Futura, "Futura PT", "Jost", system-ui, sans-serif;
+      font-weight: 500;
+      font-size: 16px;
+      letter-spacing: 0.2px;
+      line-height: 1.2;
+      text-align: center;
+
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 180ms ease, transform 180ms ease;
+    }
+
+    #focusTitle.visible {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    @media (max-width: 420px) {
+      #focusTitle { font-size: 15px; padding: 9px 12px; }
+    }
+
+    /* ===== Ende-Hinweis (oben) ===== */
+    #endOverlay {
+      position: absolute;
+      top: 58px;
+      left: 50%;
+      transform: translateX(-50%) scale(0.98);
+      z-index: 12;
+
+      padding: 10px 14px;
+      border-radius: 999px;
+      max-width: min(92vw, 680px);
+
+      background: rgba(255,255,255,0.82);
+      border: 1px solid rgba(0,0,0,0.10);
+      box-shadow: 0 14px 40px rgba(0,0,0,0.14);
+      backdrop-filter: blur(10px);
+
+      color: var(--ink);
+      font-family: Futura, "Futura PT", "Jost", system-ui, sans-serif;
+      font-weight: 500;
+      font-size: 15px;
+      line-height: 1.2;
+      text-align: center;
+
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 180ms ease, transform 180ms ease;
+    }
+
+    #endOverlay.visible {
+      opacity: 1;
+      transform: translateX(-50%) scale(1);
+    }
+
+    @media (max-width: 420px) {
+      #endOverlay { font-size: 14px; padding: 9px 12px; top: 54px; }
+    }
   </style>
 </head>
 <body>
@@ -202,6 +324,12 @@
   </div>
 
   <div id="viewer">
+    <!-- Fokus-Titel Overlay -->
+    <div id="focusTitle" aria-hidden="true"></div>
+
+    <!-- ✅ Ende-Hinweis (nur beim allerletzten Comic) -->
+    <div id="endOverlay" aria-hidden="true">Ende. Nach oben wischen zur Auswahl</div>
+
     <!-- Left / Right arrows -->
     <button id="navPrev" class="navBtn navPrev" aria-label="Zurück">
       <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -245,6 +373,8 @@
     const titleEl = document.getElementById("title");
     const img = document.getElementById("panelImg");
     const dotsEl = document.getElementById("dots");
+    const focusTitleEl = document.getElementById("focusTitle");
+    const endOverlayEl = document.getElementById("endOverlay");
 
     const navPrev = document.getElementById("navPrev");
     const navNext = document.getElementById("navNext");
@@ -261,8 +391,47 @@
     let totalPanels = 1;
     let currentIndex = 0;
 
+    // Focus UI toggle state
+    let uiHidden = false;
+
+    // Auto-hide timer (when UI is temporarily shown)
+    let autoHideTimer = null;
+
+    // Title overlay timer
+    let focusTitleTimer = null;
+
+    // Preload cache
+    const preloadCache = new Map(); // src -> Image
+
+    // ✅ Story transition state
+    let storyTransitioning = false;
+    let ignoreNextHashChange = false;
+
     function isZoomed() {
       return !!window.visualViewport && window.visualViewport.scale > 1.01;
+    }
+
+    // ===== Ende-Overlay (nur beim allerletzten Comic + letztes Panel) =====
+    function hideEndOverlay() {
+      endOverlayEl.classList.remove("visible");
+    }
+
+    function updateEndOverlay(atEnd) {
+      const isLastComic = !getNextComicId();
+      const show = atEnd && isLastComic && uiHidden; // nur im Fokusmodus
+      endOverlayEl.classList.toggle("visible", show);
+    }
+
+    function setUiHidden(hidden) {
+      uiHidden = hidden;
+      document.body.classList.toggle("ui-hidden", uiHidden);
+
+      if (uiHidden) flashFocusTitle();
+      else hideFocusTitle();
+
+      // ✅ Overlay-State neu bewerten (z.B. beim Peek)
+      const atEnd = currentIndex === totalPanels - 1;
+      updateEndOverlay(atEnd);
     }
 
     function getNextComicId() {
@@ -272,24 +441,43 @@
       return next ? next.id : null;
     }
 
-    function goToList() {
-      window.location.href = "library.html";
+    function getPrevComicId() {
+      const i = comicsIndex.findIndex(c => c.id === currentComicId);
+      if (i <= 0) return null;
+      const prev = comicsIndex[i - 1];
+      return prev ? prev.id : null;
     }
 
-    function goToNextStory() {
-      const nextId = getNextComicId();
-      if (!nextId) return;
-      location.hash = encodeURIComponent(nextId);
+    function goToList() {
+      window.location.href = "library.html";
     }
 
     function fileAt(i) {
       return panels[i] || "000.webp";
     }
 
+    function currentPanelSrc(i) {
+      return currentComicPath + fileAt(i);
+    }
+
+    function clearAutoHide() {
+      if (autoHideTimer) {
+        clearTimeout(autoHideTimer);
+        autoHideTimer = null;
+      }
+    }
+
     function setSrcWithFade(newSrc) {
+      // ✅ Panels: Fade
       img.classList.add("is-fading");
       setTimeout(() => { img.src = newSrc; }, 120);
       img.onload = () => img.classList.remove("is-fading");
+    }
+
+    function setSrcImmediate(newSrc) {
+      // ✅ Für Story-Wechsel: ohne Fade, damit Slide sauber aussieht
+      img.classList.remove("is-fading");
+      img.src = newSrc;
     }
 
     function renderDots() {
@@ -297,7 +485,11 @@
       for (let i = 0; i < totalPanels; i++) {
         const d = document.createElement("div");
         d.className = "dot" + (i === currentIndex ? " active" : "");
-        d.addEventListener("click", () => goTo(i));
+        d.addEventListener("click", () => {
+          hideFocusTitle();
+          hideEndOverlay();
+          goTo(i);
+        });
         dotsEl.appendChild(d);
       }
     }
@@ -318,52 +510,255 @@
       navPrev.disabled = atStart;
       navNext.disabled = atEnd;
 
-      // Show end controls ONLY at end
       endControls.style.display = atEnd ? "flex" : "none";
-
-      // Only show "next story" if it exists
       nextStoryBtn.style.display = (atEnd && !!getNextComicId()) ? "" : "none";
 
       updateDots();
+
+      // ✅ Ende-Hinweis: nur beim letzten Comic + letztes Panel (und Fokusmodus)
+      updateEndOverlay(atEnd);
+    }
+
+    // ===== Fokus-Titel Overlay =====
+    function hideFocusTitle() {
+      if (focusTitleTimer) {
+        clearTimeout(focusTitleTimer);
+        focusTitleTimer = null;
+      }
+      focusTitleEl.classList.remove("visible");
+    }
+
+    function flashFocusTitle() {
+      if (!uiHidden) return;
+
+      const t = (titleEl.textContent || "").trim();
+      if (!t) return;
+
+      focusTitleEl.textContent = t;
+      focusTitleEl.classList.add("visible");
+
+      if (focusTitleTimer) clearTimeout(focusTitleTimer);
+      focusTitleTimer = setTimeout(() => {
+        focusTitleEl.classList.remove("visible");
+        focusTitleTimer = null;
+      }, 2500);
+    }
+
+    // ===== Auto-hide UI (peek) =====
+    function peekUiOrToggle() {
+      hideFocusTitle();
+      hideEndOverlay();
+
+      if (uiHidden) {
+        setUiHidden(false);
+        clearAutoHide();
+        autoHideTimer = setTimeout(() => {
+          setUiHidden(true);
+          autoHideTimer = null;
+        }, 2000);
+      } else {
+        clearAutoHide();
+        setUiHidden(true);
+      }
     }
 
     function setImage() {
-      const src = currentComicPath + fileAt(currentIndex);
+      const src = currentPanelSrc(currentIndex);
       setSrcWithFade(src);
       updateUI();
+
+      // ✅ Preloading is here:
+      preloadAround(currentIndex);
     }
 
     function goTo(i) {
       if (i < 0 || i >= totalPanels) return;
       currentIndex = i;
+
+      hideFocusTitle();
+      hideEndOverlay();
+
       setImage();
     }
 
-    function prev() {
-      if (currentIndex === 0) return;
-      goTo(currentIndex - 1);
+    // ===== Panels / Story nav helpers =====
+    function prevPanelOrStory() {
+      const atStart = currentIndex === 0;
+      if (!atStart) return goTo(currentIndex - 1);
+
+      const prevId = getPrevComicId();
+      if (prevId) transitionToStory(prevId, "prev");
     }
 
-    function next() {
-      if (currentIndex >= totalPanels - 1) return;
-      goTo(currentIndex + 1);
+    function nextPanelOrStory() {
+      const atEnd = currentIndex === totalPanels - 1;
+      if (!atEnd) return goTo(currentIndex + 1);
+
+      const nextId = getNextComicId();
+      if (nextId) transitionToStory(nextId, "next");
     }
 
-    // Buttons
-    navPrev.addEventListener("click", prev);
-    navNext.addEventListener("click", next);
+    // ===== Story "Blättern" Animation =====
+    function clearStoryClasses() {
+      img.classList.remove(
+        "story-exit-left", "story-exit-right",
+        "story-enter-from-left", "story-enter-from-right"
+      );
+    }
+
+    async function transitionToStory(targetId, dir /* "next" | "prev" */) {
+      if (storyTransitioning) return;
+      storyTransitioning = true;
+
+      hideFocusTitle();
+      hideEndOverlay();
+      clearAutoHide();
+      setUiHidden(true);
+
+      const exitClass = (dir === "next") ? "story-exit-left" : "story-exit-right";
+      const enterFromClass = (dir === "next") ? "story-enter-from-right" : "story-enter-from-left";
+
+      clearStoryClasses();
+      requestAnimationFrame(() => {
+        img.classList.add(exitClass);
+      });
+
+      const exitDelay = 200;
+      setTimeout(async () => {
+        try {
+          ignoreNextHashChange = true;
+          location.hash = encodeURIComponent(targetId);
+
+          clearStoryClasses();
+          img.classList.add(enterFromClass);
+
+          await loadComic(targetId, { useImmediateImage: true });
+
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              img.classList.remove(enterFromClass);
+            });
+          });
+
+          setTimeout(() => {
+            storyTransitioning = false;
+          }, 230);
+
+        } catch (err) {
+          console.error(err);
+          storyTransitioning = false;
+        }
+      }, exitDelay);
+    }
+
+    // ===== Preloading =====
+    function preloadSrc(src) {
+      if (!src) return;
+      if (preloadCache.has(src)) return;
+
+      const im = new Image();
+      im.decoding = "async";
+      im.loading = "eager";
+      im.src = src;
+
+      preloadCache.set(src, im);
+
+      if (preloadCache.size > 60) {
+        const firstKey = preloadCache.keys().next().value;
+        preloadCache.delete(firstKey);
+      }
+    }
+
+    function preloadAround(idx) {
+      const candidates = [
+        idx - 2, idx - 1,
+        idx + 1, idx + 2,
+      ].filter(i => i >= 0 && i < totalPanels);
+
+      for (const i of candidates) {
+        preloadSrc(currentPanelSrc(i));
+      }
+
+      const atStart = idx === 0;
+      const atEnd = idx === totalPanels - 1;
+
+      if (atEnd) {
+        const nextId = getNextComicId();
+        if (nextId) preloadSrc(`comics/${nextId}/000.webp`);
+      }
+      if (atStart) {
+        const prevId = getPrevComicId();
+        if (prevId) preloadSrc(`comics/${prevId}/000.webp`);
+      }
+    }
+
+    // ===== Buttons =====
+    navPrev.addEventListener("click", () => {
+      hideFocusTitle();
+      hideEndOverlay();
+      prevPanelOrStory();
+    });
+
+    navNext.addEventListener("click", () => {
+      hideFocusTitle();
+      hideEndOverlay();
+      nextPanelOrStory();
+    });
+
     backToListBtn.addEventListener("click", goToList);
-    nextStoryBtn.addEventListener("click", goToNextStory);
+
+    nextStoryBtn.addEventListener("click", () => {
+      const nextId = getNextComicId();
+      if (!nextId) return;
+      transitionToStory(nextId, "next");
+    });
 
     // Keyboard
     document.addEventListener("keydown", (e) => {
-      if (e.key === "ArrowLeft") prev();
-      if (e.key === "ArrowRight") next();
+      if (e.key === "ArrowLeft")  { hideFocusTitle(); hideEndOverlay(); prevPanelOrStory(); }
+      if (e.key === "ArrowRight") { hideFocusTitle(); hideEndOverlay(); nextPanelOrStory(); }
+      if (e.key === "Escape") goToList();
+      if (e.key === " " || e.key === "Enter") peekUiOrToggle();
     });
 
-    // Swipe (no dragging transform; better on mobile)
+    // ===== Tap-to-toggle UI (Focus "peek" mode) + ✅ Tap-Zonen links/rechts =====
+    function isInteractiveTarget(el) {
+      if (!el) return false;
+      return !!el.closest("button, a, #dots, .dot, #endControls");
+    }
+
+    viewer.addEventListener("click", (e) => {
+      if (isInteractiveTarget(e.target)) return;
+
+      const rect = viewer.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const w = rect.width;
+
+      const edgeZone = Math.max(64, w * 0.18);
+
+      if (x <= edgeZone) {
+        prevPanelOrStory();
+        return;
+      }
+      if (x >= (w - edgeZone)) {
+        nextPanelOrStory();
+        return;
+      }
+
+      peekUiOrToggle();
+    });
+
+    // ✅ Prevent 1-finger scroll rubber-band wobble (keep pinch zoom)
+    viewer.addEventListener("touchmove", (e) => {
+      if (e.touches.length === 1 && !isZoomed()) {
+        e.preventDefault();
+      }
+    }, { passive: false });
+
+    // ===== Swipe (Panels + Storywechsel + Swipe up = zurück) + ✅ Edge-Swipe =====
     let startX = 0;
     let startY = 0;
+    let startEdge = false;
 
     viewer.addEventListener("touchstart", (e) => {
       if (e.touches.length !== 1) return;
@@ -371,52 +766,61 @@
 
       startX = e.touches[0].clientX;
       startY = e.touches[0].clientY;
+
+      const edgePx = Math.min(28, window.innerWidth * 0.06);
+      startEdge = (startX <= edgePx);
     }, { passive: true });
 
-      viewer.addEventListener("touchend", (e) => {
-        if (!startX || !startY) return;
+    viewer.addEventListener("touchend", (e) => {
+      if (!startX || !startY) return;
 
-        const touch = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0] : null;
-        if (!touch) return;
+      const touch = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0] : null;
+      if (!touch) return;
 
-        const endX = touch.clientX;
-        const endY = touch.clientY;
+      const endX = touch.clientX;
+      const endY = touch.clientY;
 
-        const dx = endX - startX;
-        const dy = endY - startY;
+      const dx = endX - startX;
+      const dy = endY - startY;
 
-        startX = 0;
-        startY = 0;
+      const wasEdge = startEdge;
 
-        const thresholdX = Math.min(80, window.innerWidth * 0.12);
-        const thresholdY = Math.min(80, window.innerHeight * 0.12);
+      startX = 0;
+      startY = 0;
+      startEdge = false;
 
-        // 1) Entscheide, ob es eher horizontal oder vertikal war
-        if (Math.abs(dx) > Math.abs(dy)) {
-          // Horizontal → Panel Navigation
-          if (dx < -thresholdX) next();
-          else if (dx > thresholdX) prev();
-          return;
+      const thresholdX = Math.min(80, window.innerWidth * 0.12);
+      const thresholdY = Math.min(120, window.innerHeight * 0.16);
+
+      // ✅ Edge-Swipe (links -> rechts): zurück zur Auswahl
+      if (wasEdge && dx > thresholdX && Math.abs(dx) > Math.abs(dy)) {
+        goToList();
+        return;
+      }
+
+      if (Math.abs(dx) > Math.abs(dy)) {
+        hideFocusTitle();
+        hideEndOverlay();
+
+        if (dx < -thresholdX) {
+          nextPanelOrStory();
+        } else if (dx > thresholdX) {
+          prevPanelOrStory();
         }
+        return;
+      }
 
-        // Vertikal → zurück zur Auswahl
-        // dy > 0 = nach unten gewischt
-        // dy < 0 = nach oben gewischt
+      if (dy < -thresholdY) {
+        goToList();
+      }
+    }, { passive: true });
 
-        // Variante A: Swipe NACH OBEN = zurück
-        if (dy < -thresholdY) {
-          goToList();
-        }
-
-        // Variante B (alternative): Swipe NACH UNTEN = zurück
-        // if (dy > thresholdY) {
-        //   goToList();
-        // }
-      }, { passive: true });
-
-
-    // Hash change (next story)
+    // Hash change (external navigation)
     window.addEventListener("hashchange", () => {
+      if (ignoreNextHashChange) {
+        ignoreNextHashChange = false;
+        return;
+      }
       const newId = getComicIdFromUrl();
       loadComic(newId).catch(err => {
         console.error(err);
@@ -425,7 +829,7 @@
       });
     });
 
-    async function loadComic(comicId) {
+    async function loadComic(comicId, opts = {}) {
       currentComicId = comicId;
       currentComicPath = `comics/${currentComicId}/`;
 
@@ -438,7 +842,22 @@
       currentIndex = 0;
 
       renderDots();
-      setImage();
+
+      // ✅ Fokusmodus startet sofort beim Öffnen / Storywechsel
+      setUiHidden(true);
+
+      const firstSrc = currentPanelSrc(0);
+      if (opts.useImmediateImage) setSrcImmediate(firstSrc);
+      else setSrcWithFade(firstSrc);
+
+      updateUI();
+
+      preloadAround(0);
+
+      flashFocusTitle();
+
+      // Ende-Hinweis sicher aus (Index=0)
+      updateEndOverlay(currentIndex === totalPanels - 1);
     }
 
     async function init() {
