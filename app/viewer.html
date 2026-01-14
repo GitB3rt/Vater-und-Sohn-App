@@ -367,6 +367,23 @@
       return await res.json();
     }
 
+    // ===== Device detection: Fokusmodus nur auf Smartphone =====
+    function isSmartphone() {
+      const coarse = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
+      const narrow = Math.min(window.innerWidth, window.innerHeight) <= 520; // Smartphone-typisch
+      return coarse && narrow;
+    }
+    let PHONE_MODE = isSmartphone();
+
+    window.addEventListener("resize", () => {
+      const next = isSmartphone();
+      if (next !== PHONE_MODE) {
+        PHONE_MODE = next;
+        // Wenn wir auf Desktop wechseln: UI sicher einblenden
+        if (!PHONE_MODE) setUiHidden(false);
+      }
+    });
+
     // DOM
     const progressEl = document.getElementById("progress");
     const viewer = document.getElementById("viewer");
@@ -418,11 +435,14 @@
 
     function updateEndOverlay(atEnd) {
       const isLastComic = !getNextComicId();
-      const show = atEnd && isLastComic && uiHidden; // nur im Fokusmodus
+      const show = atEnd && isLastComic && uiHidden && PHONE_MODE; // nur im Fokusmodus + Phone
       endOverlayEl.classList.toggle("visible", show);
     }
 
     function setUiHidden(hidden) {
+      // Fokusmodus nur auf Smartphone
+      if (!PHONE_MODE) hidden = false;
+
       uiHidden = hidden;
       document.body.classList.toggle("ui-hidden", uiHidden);
 
@@ -449,6 +469,12 @@
     }
 
     function goToList() {
+      window.location.href = "library.html";
+    }
+
+    // ✅ Menü-Navigation (Swipe nach unten)
+    function goToMenu() {
+      // Passe das Ziel ggf. an (z.B. "index.html" oder "menu.html")
       window.location.href = "library.html";
     }
 
@@ -529,7 +555,7 @@
     }
 
     function flashFocusTitle() {
-      if (!uiHidden) return;
+      if (!uiHidden || !PHONE_MODE) return;
 
       const t = (titleEl.textContent || "").trim();
       if (!t) return;
@@ -546,6 +572,9 @@
 
     // ===== Auto-hide UI (peek) =====
     function peekUiOrToggle() {
+      // Auf Desktop/Notebook kein Fokusmodus -> kein Toggle/Peek
+      if (!PHONE_MODE) return;
+
       hideFocusTitle();
       hideEndOverlay();
 
@@ -613,7 +642,7 @@
       hideFocusTitle();
       hideEndOverlay();
       clearAutoHide();
-      setUiHidden(true);
+      setUiHidden(PHONE_MODE); // ✅ Fokus nur auf Phone
 
       const exitClass = (dir === "next") ? "story-exit-left" : "story-exit-right";
       const enterFromClass = (dir === "next") ? "story-enter-from-right" : "story-enter-from-left";
@@ -745,6 +774,7 @@
         return;
       }
 
+      // ✅ Nur auf Smartphone: Fokus Peek/Toggle
       peekUiOrToggle();
     });
 
@@ -755,7 +785,7 @@
       }
     }, { passive: false });
 
-    // ===== Swipe (Panels + Storywechsel + Swipe up = zurück) + ✅ Edge-Swipe =====
+    // ===== Swipe (Panels + Storywechsel + Swipe up = Auswahl + Swipe down = Menü) + ✅ Edge-Swipe =====
     let startX = 0;
     let startY = 0;
     let startEdge = false;
@@ -810,8 +840,16 @@
         return;
       }
 
+      // ✅ Swipe nach oben: zurück zur Auswahl (bestehend)
       if (dy < -thresholdY) {
         goToList();
+        return;
+      }
+
+      // ✅ NEU: Swipe nach unten: zurück zum Menü
+      if (dy > thresholdY) {
+        goToMenu();
+        return;
       }
     }, { passive: true });
 
@@ -843,8 +881,8 @@
 
       renderDots();
 
-      // ✅ Fokusmodus startet sofort beim Öffnen / Storywechsel
-      setUiHidden(true);
+      // ✅ Fokusmodus startet sofort nur auf Smartphone
+      setUiHidden(PHONE_MODE);
 
       const firstSrc = currentPanelSrc(0);
       if (opts.useImmediateImage) setSrcImmediate(firstSrc);
@@ -863,6 +901,8 @@
     async function init() {
       comicsIndex = await fetchJson("comics/index.json");
       await loadComic(getComicIdFromUrl());
+      // Desktop sicher "normal":
+      if (!PHONE_MODE) setUiHidden(false);
     }
 
     init().catch(err => {
