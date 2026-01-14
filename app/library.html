@@ -10,9 +10,6 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600&display=swap" rel="stylesheet">
 
-  <!-- PWA -->
-  <link rel="manifest" href="manifest.webmanifest">
-  <meta name="theme-color" content="#ffffff">
 
   <style>
     :root{
@@ -409,10 +406,6 @@
     });
 
     loadComics();
-
-    if ("serviceWorker" in navigator && location.hostname !== "localhost") {
-      navigator.serviceWorker.register("sw.js").catch(console.error);
-    }
 
     // ===== Info overlay =====
     const infoBtn = document.getElementById("infoBtn");
