@@ -82,6 +82,16 @@
       padding: 12px 0;
     }
 
+    /* Carousel container - hidden on mobile, flex on desktop */
+    #carouselContainer {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      width: 100%;
+      height: 100%;
+    }
+
     #panelImg {
       width: min(620px, 94vw);
       height: auto;
@@ -97,6 +107,43 @@
       will-change: transform, opacity;
     }
     #panelImg.is-fading { opacity: 0; }
+
+    /* Side panels - only visible on desktop */
+    .side-panel {
+      width: min(434px, 28vw);
+      height: auto;
+      max-height: calc(100vh - 200px);
+      object-fit: contain;
+      display: none;
+      background: transparent;
+      -webkit-user-drag: none;
+      opacity: 0.7;
+      transform: scale(0.85);
+      transition: opacity 200ms ease, transform 200ms ease;
+      cursor: pointer;
+      will-change: transform, opacity;
+    }
+
+    .side-panel:hover {
+      opacity: 0.9;
+      transform: scale(0.88);
+    }
+
+    .side-panel.hidden {
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    /* Desktop carousel mode - activate on screens > 768px */
+    @media (min-width: 769px) {
+      .side-panel {
+        display: block;
+      }
+
+      #panelImg {
+        width: min(620px, 42vw);
+      }
+    }
 
     /* ✅ Story "Blättern" Animation (nur für Comic-Wechsel) */
     #panelImg.story-exit-left  { transform: translateX(-42px); opacity: 0; }
@@ -332,7 +379,12 @@
       </svg>
     </button>
 
-    <img id="panelImg" src="" alt="Comic Panel">
+    <!-- Carousel container for desktop -->
+    <div id="carouselContainer">
+      <img id="prevPanelImg" class="side-panel side-panel-prev" src="" alt="Previous Panel">
+      <img id="panelImg" src="" alt="Comic Panel">
+      <img id="nextPanelImg" class="side-panel side-panel-next" src="" alt="Next Panel">
+    </div>
 
     <button id="navNext" class="navBtn navNext" aria-label="Weiter">
       <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -370,6 +422,11 @@
     }
     let PHONE_MODE = isSmartphone();
 
+    // ===== Desktop carousel detection =====
+    function isDesktopCarousel() {
+      return window.innerWidth > 768;
+    }
+
     window.addEventListener("resize", () => {
       const next = isSmartphone();
       if (next !== PHONE_MODE) {
@@ -377,6 +434,8 @@
         // Wenn wir auf Desktop wechseln: UI sicher einblenden
         if (!PHONE_MODE) setUiHidden(false);
       }
+      // Update side panels on resize (carousel mode may change)
+      updateSidePanels();
     });
 
     // DOM
@@ -384,6 +443,8 @@
     const viewer = document.getElementById("viewer");
     const titleEl = document.getElementById("title");
     const img = document.getElementById("panelImg");
+    const prevPanelImg = document.getElementById("prevPanelImg");
+    const nextPanelImg = document.getElementById("nextPanelImg");
     const dotsEl = document.getElementById("dots");
     const focusTitleEl = document.getElementById("focusTitle");
     const endOverlayEl = document.getElementById("endOverlay");
@@ -501,6 +562,34 @@
       img.src = newSrc;
     }
 
+    // ===== Update side panels for carousel =====
+    function updateSidePanels() {
+      if (!isDesktopCarousel()) {
+        prevPanelImg.classList.add("hidden");
+        nextPanelImg.classList.add("hidden");
+        return;
+      }
+
+      const hasPrev = currentIndex > 0;
+      const hasNext = currentIndex < totalPanels - 1;
+
+      // Update previous panel
+      if (hasPrev) {
+        prevPanelImg.src = currentPanelSrc(currentIndex - 1);
+        prevPanelImg.classList.remove("hidden");
+      } else {
+        prevPanelImg.classList.add("hidden");
+      }
+
+      // Update next panel
+      if (hasNext) {
+        nextPanelImg.src = currentPanelSrc(currentIndex + 1);
+        nextPanelImg.classList.remove("hidden");
+      } else {
+        nextPanelImg.classList.add("hidden");
+      }
+    }
+
     function renderDots() {
       dotsEl.innerHTML = "";
       for (let i = 0; i < totalPanels; i++) {
@@ -590,6 +679,7 @@
       const src = currentPanelSrc(currentIndex);
       setSrcWithFade(src);
       updateUI();
+      updateSidePanels();
 
       // ✅ Preloading is here:
       preloadAround(currentIndex);
@@ -737,6 +827,23 @@
       transitionToStory(nextId, "next");
     });
 
+    // Click handlers for side panels in carousel mode
+    prevPanelImg.addEventListener("click", () => {
+      if (isDesktopCarousel() && currentIndex > 0) {
+        hideFocusTitle();
+        hideEndOverlay();
+        prevPanelOrStory();
+      }
+    });
+
+    nextPanelImg.addEventListener("click", () => {
+      if (isDesktopCarousel() && currentIndex < totalPanels - 1) {
+        hideFocusTitle();
+        hideEndOverlay();
+        nextPanelOrStory();
+      }
+    });
+
     // Keyboard
     document.addEventListener("keydown", (e) => {
       if (e.key === "ArrowLeft")  { hideFocusTitle(); hideEndOverlay(); prevPanelOrStory(); }
@@ -748,7 +855,7 @@
     // ===== Tap-to-toggle UI (Focus "peek" mode) + ✅ Tap-Zonen links/rechts =====
     function isInteractiveTarget(el) {
       if (!el) return false;
-      return !!el.closest("button, a, #dots, .dot, #endControls");
+      return !!el.closest("button, a, #dots, .dot, #endControls, .side-panel");
     }
 
     viewer.addEventListener("click", (e) => {
@@ -884,6 +991,7 @@
       else setSrcWithFade(firstSrc);
 
       updateUI();
+      updateSidePanels();
 
       preloadAround(0);
 

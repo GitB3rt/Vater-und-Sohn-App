@@ -10,3 +10,9 @@ output/
 *.pyc
 tools/Vater_und_Sohn_Bildstrecke
 tools/input_scans/
+
+# Claude Code working directory
+.claude/
+
+# Temp files
+nul
